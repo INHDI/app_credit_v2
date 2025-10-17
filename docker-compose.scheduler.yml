@@ -3,7 +3,7 @@ services:
     build:
       context: ./scheduler
       dockerfile: Dockerfile
-    container_name: app_credit_scheduler
+    container_name: app_credit_scheduler_v2
     restart: unless-stopped
     volumes:
       - ./scheduler/logs:/var/log
