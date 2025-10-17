@@ -1,0 +1,26 @@
+services:
+  frontend:
+    image: ${DOCKER_IMAGE_FRONTEND:-app-credit-frontend}:${TAG:-latest}
+    restart: unless-stopped
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    environment:
+      - NODE_ENV=production
+      # Expose your API base URLs to the app if needed
+      # - NEXT_PUBLIC_API_BASE_URL=http://10.15.7.22:8088
+      # - NEXT_PUBLIC_WS_URL=ws://10.15.7.22:8088
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+
+networks:
+  app-network:
+    driver: bridge
+
