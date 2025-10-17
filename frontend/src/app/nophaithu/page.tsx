@@ -1,7 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/PageHeader";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus } from "lucide-react";
 import NoPhaiThuSummary from "./NoPhaiThuSummary";
 import NoPhaiThuFilter from "./NoPhaiThuFilter";
@@ -9,6 +9,7 @@ import NoPhaiThuTable from "./NoPhaiThuTable";
 import NoPhaiThuPagination from "./NoPhaiThuPagination";
 import { formatCurrency } from "@/utils/formatters";
 import ApiService from "@/services/api";
+import { useDashboardEvents } from "@/hooks/useWebSocket";
 
 // Map API response item to table row shape
 function mapApiItemToContract(item: any) {
@@ -59,27 +60,38 @@ export default function NoPhaiThuPage() {
   
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const json = await ApiService.getNoPhaiThu('today');
-        if (json?.success && Array.isArray(json.data)) {
-          const mapped = json.data.map(mapApiItemToContract);
-          setContracts(mapped);
-        } else {
-          setContracts([]);
-        }
-      } catch (e: any) {
-        setError(e?.message || 'Tải nợ phải thu thất bại');
+  // Fetch data function
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const json = await ApiService.getNoPhaiThu('today');
+      if (json?.success && Array.isArray(json.data)) {
+        const mapped = json.data.map(mapApiItemToContract);
+        setContracts(mapped);
+        console.log('🔄 NoPhaiThu data refreshed - Total:', mapped.length);
+      } else {
         setContracts([]);
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchData();
+    } catch (e: any) {
+      setError(e?.message || 'Tải nợ phải thu thất bại');
+      setContracts([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Subscribe to WebSocket events for real-time updates
+  useDashboardEvents((data, message) => {
+    console.log('📡 NoPhaiThu page received WebSocket event:', message.type);
+    // Auto-refresh when data changes
+    fetchData();
+  });
 
   // Filter contracts
   const filteredContracts = contracts.filter(contract => {

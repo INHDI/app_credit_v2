@@ -7,6 +7,7 @@ import logging
 
 from app.core.database import engine, Base
 from app.routers import tin_chap, tra_gop, lich_su_tra_lai, no_phai_thu, dashboard, lich_su
+from app.websocket import router as websocket_router
 
 # Configure logging for the application
 logging.basicConfig(
@@ -44,6 +45,7 @@ app.include_router(lich_su_tra_lai.router)
 app.include_router(no_phai_thu.router)
 app.include_router(dashboard.router)
 app.include_router(lich_su.router)
+app.include_router(websocket_router)
 # Startup event
 @app.on_event("startup")
 async def startup_event():
@@ -67,7 +69,9 @@ async def root():
             "LichSuTraLai": "/lich-su-tra-lai",
             "NoPhaiThu": "/no-phai-thu",
             "Dashboard": "/dashboard",
-            "LichSu": "/lich-su"
+            "LichSu": "/lich-su",
+            "WebSocket": "/ws/{client_id}",
+            "WebSocket Status": "/ws/connections"
         },
         "docs": "/docs",
         "redoc": "/redoc"

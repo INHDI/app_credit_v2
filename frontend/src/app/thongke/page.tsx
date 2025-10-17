@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useThongKe } from "@/hooks/useThongKe";
+import { useDashboardEvents } from "@/hooks/useWebSocket";
 
 type LineSeries = {
   name: string;
@@ -265,10 +266,18 @@ export default function ThongKe() {
     statistics,
     loading,
     error,
+    refreshData,
   } = useThongKe({ 
     granularity: "monthly", 
     startDate: formatDateForAPI(firstDayOfMonth), 
     endDate: formatDateForAPI(today) 
+  });
+
+  // Subscribe to WebSocket events for real-time updates
+  useDashboardEvents((data, message) => {
+    console.log('📡 ThongKe page received WebSocket event:', message.type);
+    // Auto-refresh statistics when data changes
+    refreshData();
   });
 
   const summary = statistics?.summary;

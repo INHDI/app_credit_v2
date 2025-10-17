@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.schemas.lich_su_tra_lai import LichSuTraLai
 from app.schemas.response import ApiResponse
 from app.crud import lich_su_tra_lai as crud_lich_su
+from app.websocket import manager, EventType, broadcast_lich_su_tra_lai_event, broadcast_dashboard_update
 
 router = APIRouter(
     prefix="/lich-su-tra-lai",
@@ -23,6 +24,15 @@ async def create_lich_su(
 ):
     """Create payment history records for a contract"""
     result = crud_lich_su.create_lich_su(db=db, ma_hd=ma_hd)
+    
+    # Broadcast WebSocket event
+    await broadcast_lich_su_tra_lai_event(
+        manager=manager,
+        event_type=EventType.LICH_SU_TRA_LAI_CREATED,
+        lich_su_data={"ma_hd": ma_hd, "result": result},
+        message=f"Tạo lịch sử trả lãi cho hợp đồng {ma_hd} thành công"
+    )
+    
     return ApiResponse.success_response(data=result, message="Tạo lịch sử trả lãi thành công")
 
 
@@ -61,6 +71,15 @@ async def delete_lich_su(stt: int, db: Session = Depends(get_db)):
     success = crud_lich_su.delete_lich_su(db=db, stt=stt)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
+    
+    # Broadcast WebSocket event
+    await broadcast_lich_su_tra_lai_event(
+        manager=manager,
+        event_type=EventType.LICH_SU_TRA_LAI_DELETED,
+        lich_su_data={"stt": stt},
+        message=f"Xóa lịch sử trả lãi kỳ {stt} thành công"
+    )
+    
     return ApiResponse.success_response(data={"Stt": stt}, message="Xóa lịch sử trả lãi thành công")
 
 
@@ -70,6 +89,15 @@ async def delete_lich_su_by_contract(ma_hd: str, db: Session = Depends(get_db)):
     so_ban_ghi_da_xoa = crud_lich_su.delete_lich_sus_by_contract(db=db, ma_hd=ma_hd)
     if so_ban_ghi_da_xoa == 0:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi cho hợp đồng này")
+    
+    # Broadcast WebSocket event
+    await broadcast_lich_su_tra_lai_event(
+        manager=manager,
+        event_type=EventType.LICH_SU_TRA_LAI_DELETED,
+        lich_su_data={"ma_hd": ma_hd, "records_deleted": so_ban_ghi_da_xoa},
+        message=f"Xóa {so_ban_ghi_da_xoa} bản ghi lịch sử trả lãi cho hợp đồng {ma_hd}"
+    )
+    
     return ApiResponse.success_response(
         data={"MaHD": ma_hd, "records_deleted": so_ban_ghi_da_xoa}, 
         message=f"Xóa {so_ban_ghi_da_xoa} bản ghi lịch sử trả lãi cho hợp đồng {ma_hd} thành công"
@@ -85,6 +113,22 @@ async def pay_lich_su(
     result = crud_lich_su.pay_lich_su(db=db, stt=stt, so_tien=so_tien)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
+    
+    # Broadcast WebSocket event - quan trọng cho real-time updates!
+    await broadcast_lich_su_tra_lai_event(
+        manager=manager,
+        event_type=EventType.LICH_SU_TRA_LAI_UPDATED,
+        lich_su_data={"stt": stt, "so_tien": so_tien, "result": result},
+        message=f"Thanh toán {so_tien:,} VNĐ cho kỳ {stt} thành công"
+    )
+    
+    # Also trigger dashboard update
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "payment", "stt": stt, "amount": so_tien},
+        message="Dashboard cần cập nhật sau thanh toán"
+    )
+    
     return ApiResponse.success_response(data=result, message="Thanh toán lịch sử trả lãi thành công")
 
 @router.post("/auto-create-lich-su", response_model=ApiResponse[Any])
@@ -101,4 +145,20 @@ async def pay_full_lich_su(
 ):
     """Pay full payment history records for a specific contract"""
     result = crud_lich_su.tat_toan_hop_dong(db=db, ma_hd=ma_hd)
+    
+    # Broadcast WebSocket event cho tất toán
+    await broadcast_lich_su_tra_lai_event(
+        manager=manager,
+        event_type=EventType.LICH_SU_TRA_LAI_UPDATED,
+        lich_su_data={"ma_hd": ma_hd, "action": "pay_full", "result": result},
+        message=f"Tất toán hợp đồng {ma_hd} thành công"
+    )
+    
+    # Trigger dashboard update
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "pay_full", "ma_hd": ma_hd},
+        message="Dashboard cần cập nhật sau tất toán"
+    )
+    
     return ApiResponse.success_response(data=result, message="Tất toán hợp đồng thành công")

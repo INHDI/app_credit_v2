@@ -9,6 +9,7 @@ import TinChapFilter from "./TinChapFilter";
 import TinChapTable from "./TinChapTable";
 import TinChapPagination from "./TinChapPagination";
 import AddTinChapModal from "./AddTinChapModal";
+import { useTinChapEvents } from "@/hooks/useWebSocket";
 
 export default function Page() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -19,6 +20,13 @@ export default function Page() {
   useEffect(() => {
     console.log("TinChapPage");
   }, []);
+
+  // Subscribe to WebSocket events for real-time updates
+  useTinChapEvents((data, message) => {
+    console.log('📡 TinChap WebSocket event received:', message.type);
+    // Auto-refresh list when data changes
+    refreshContracts();
+  });
 
   const {
     breadcrumbItems,

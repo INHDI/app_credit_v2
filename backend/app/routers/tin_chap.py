@@ -10,6 +10,7 @@ from app.schemas.tin_chap import TinChapCreate, TinChapResponse, TinChapUpdate, 
 from app.schemas.response import ApiResponse
 from app.crud import tin_chap as crud_tin_chap
 from app.utils.id_generator import generate_tin_chap_id
+from app.websocket import manager, EventType, broadcast_tin_chap_event, broadcast_dashboard_update
 
 router = APIRouter(
     prefix="/tin-chap",
@@ -24,6 +25,22 @@ async def create_tin_chap(tin_chap: TinChapCreate, db: Session = Depends(get_db)
     result = crud_tin_chap.create_tin_chap(db=db, tin_chap=tin_chap, ma_hd=ma_hd)
     # Convert SQLAlchemy model to Pydantic schema
     tin_chap_response = TinChap.model_validate(result)
+    
+    # Broadcast WebSocket event
+    await broadcast_tin_chap_event(
+        manager=manager,
+        event_type=EventType.TIN_CHAP_CREATED,
+        tin_chap_data=tin_chap_response.model_dump(mode='json'),
+        message=f"Tạo hợp đồng tín chấp {ma_hd} thành công"
+    )
+    
+    # Trigger dashboard update
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "tin_chap_created", "ma_hd": ma_hd},
+        message="Dashboard cần cập nhật sau tạo tín chấp mới"
+    )
+    
     return ApiResponse.success_response(data=tin_chap_response, message="Tạo hợp đồng tín chấp thành công")
 
 
@@ -69,6 +86,22 @@ async def update_tin_chap(ma_hd: str, tin_chap_update: TinChapUpdate, db: Sessio
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng tín chấp")
     # Convert SQLAlchemy model to Pydantic schema
     tin_chap_response = TinChap.model_validate(db_tin_chap)
+    
+    # Broadcast WebSocket event
+    await broadcast_tin_chap_event(
+        manager=manager,
+        event_type=EventType.TIN_CHAP_UPDATED,
+        tin_chap_data=tin_chap_response.model_dump(mode='json'),
+        message=f"Cập nhật hợp đồng tín chấp {ma_hd} thành công"
+    )
+    
+    # Trigger dashboard update
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "tin_chap_updated", "ma_hd": ma_hd},
+        message="Dashboard cần cập nhật sau update tín chấp"
+    )
+    
     return ApiResponse.success_response(data=tin_chap_response, message="Cập nhật hợp đồng tín chấp thành công")
 
 
@@ -78,6 +111,22 @@ async def delete_tin_chap(ma_hd: str, db: Session = Depends(get_db)):
     success = crud_tin_chap.delete_tin_chap(db=db, ma_hd=ma_hd)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng tín chấp")
+    
+    # Broadcast WebSocket event
+    await broadcast_tin_chap_event(
+        manager=manager,
+        event_type=EventType.TIN_CHAP_DELETED,
+        tin_chap_data={"MaHD": ma_hd},
+        message=f"Xóa hợp đồng tín chấp {ma_hd} thành công"
+    )
+    
+    # Trigger dashboard update
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "tin_chap_deleted", "ma_hd": ma_hd},
+        message="Dashboard cần cập nhật sau xóa tín chấp"
+    )
+    
     return ApiResponse.success_response(data={"MaHD": ma_hd}, message="Xóa hợp đồng tín chấp thành công")
 
 @router.put("/tra-goc/{ma_hd}", response_model=ApiResponse[Any])
@@ -89,4 +138,13 @@ async def tra_goc_tin_chap(
     success = crud_tin_chap.tra_goc_tin_chap(db=db, ma_hd=ma_hd, so_tien_tra_goc=so_tien_tra_goc)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng tín chấp")
+    
+    # Broadcast WebSocket event
+    await broadcast_tin_chap_event(
+        manager=manager,
+        event_type=EventType.TIN_CHAP_UPDATED,
+        tin_chap_data={"MaHD": ma_hd, "so_tien_tra_goc": so_tien_tra_goc},
+        message=f"Trả gốc hợp đồng tín chấp {ma_hd} thành công"
+    )
+    
     return ApiResponse.success_response(data={"MaHD": ma_hd}, message="Trả gốc hợp đồng tín chấp thành công")

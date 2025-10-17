@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navigation, { MobileBottomNav } from "@/components/layout/Navigation";
+import { WebSocketProvider } from "@/providers/WebSocketProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,15 +27,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4 p-4 pb-20 lg:pb-4">
-          <div className="hidden lg:block">
-            <Navigation />
+        <WebSocketProvider>
+          <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4 p-4 pb-20 lg:pb-4">
+            <div className="hidden lg:block">
+              <Navigation />
+            </div>
+            <div>
+              {children}
+            </div>
+            <MobileBottomNav />
           </div>
-          <div>
-            {children}
-          </div>
-          <MobileBottomNav />
-        </div>
+        </WebSocketProvider>
       </body>
     </html>
   );

@@ -16,10 +16,11 @@ import {
 } from "lucide-react";
 import StatsCard from "@/components/ui/StatsCard";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type React from "react";
 import { fetchDashboardData, type DashboardData } from "@/services/dashboardApi";
 import { formatCurrency } from "@/lib/utils";
+import { useDashboardEvents } from "@/hooks/useWebSocket";
 
 type DashboardFilters = {
   window: "all" | "this_month" | "this_quarter" | "this_year";
@@ -42,27 +43,34 @@ export default function Dashboard() {
   };
 
   // Fetch dashboard data
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetchDashboardData(filters.window);
-        if (response.success) {
-          setDashboardData(response.data);
-        } else {
-          setError(response.message || 'Không thể tải dữ liệu');
-        }
-      } catch (err) {
-        setError('Lỗi kết nối đến server');
-        console.error('Dashboard fetch error:', err);
-      } finally {
-        setLoading(false);
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetchDashboardData(filters.window);
+      if (response.success) {
+        setDashboardData(response.data);
+      } else {
+        setError(response.message || 'Không thể tải dữ liệu');
       }
-    };
-
-    loadDashboardData();
+    } catch (err) {
+      setError('Lỗi kết nối đến server');
+      console.error('Dashboard fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [filters.window]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  // Subscribe to WebSocket events for real-time updates
+  useDashboardEvents((data, message) => {
+    console.log('📡 Dashboard WebSocket event received:', message.type);
+    // Auto-refresh dashboard when data changes
+    loadDashboardData();
+  });
 
   const getStatsCards = () => {
     if (!dashboardData) {

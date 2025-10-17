@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import LichSuPagination from "./LichSuPagination";
 import { fetchLichSu, LichSuData } from "@/services/lichsuApi";
 import { formatDateForInput, formatDateForAPI } from "@/lib/utils";
 import { useMemo } from "react";
+import { useWebSocketEvents } from "@/hooks/useWebSocket";
+import { WebSocketEventType } from "@/types/websocket";
 
 export default function LichSu() {
   const [lichSuData, setLichSuData] = useState<LichSuData | null>(null);
@@ -34,7 +36,7 @@ export default function LichSu() {
   const itemsPerPage = 10;
 
   // Fetch data function
-  const loadLichSuData = async (tuNgay?: string, denNgay?: string) => {
+  const loadLichSuData = useCallback(async (tuNgay?: string, denNgay?: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -43,6 +45,7 @@ export default function LichSu() {
       
       if (response.success) {
         setLichSuData(response.data);
+        console.log('🔄 LichSu data refreshed');
       } else {
         setError(response.message || 'Không thể tải dữ liệu');
       }
@@ -52,7 +55,7 @@ export default function LichSu() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Load initial data on mount
   useEffect(() => {
@@ -62,6 +65,26 @@ export default function LichSu() {
     loadLichSuData(tuNgay, denNgay);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Subscribe to WebSocket events for real-time updates
+  useWebSocketEvents(
+    [
+      WebSocketEventType.LICH_SU_TRA_LAI_CREATED,
+      WebSocketEventType.LICH_SU_TRA_LAI_UPDATED,
+      WebSocketEventType.LICH_SU_TRA_LAI_DELETED,
+      WebSocketEventType.TIN_CHAP_CREATED,
+      WebSocketEventType.TIN_CHAP_UPDATED,
+      WebSocketEventType.TRA_GOP_CREATED,
+      WebSocketEventType.TRA_GOP_UPDATED,
+    ],
+    (data, message) => {
+      console.log('📡 LichSu page received WebSocket event:', message.type);
+      // Refresh with current date filter
+      const tuNgay = formatDateForAPI(new Date(fromDate));
+      const denNgay = formatDateForAPI(new Date(toDate));
+      loadLichSuData(tuNgay, denNgay);
+    }
+  );
 
   // Handle search button click
   const handleSearch = () => {

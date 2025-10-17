@@ -23,6 +23,8 @@ import PaymentModal from '@/components/ui/PaymentModal';
 import { payInterestByRecord, payPrincipalTinChap } from '@/services/paymentApi';
 import PrincipalPaymentModal from '@/components/ui/PrincipalPaymentModal';
 import PaymentsList from '@/components/ui/PaymentsList';
+import { useWebSocketEvents } from '@/hooks/useWebSocket';
+import { WebSocketEventType } from '@/types/websocket';
 
 interface TinChapDetailModalProps {
   isOpen: boolean;
@@ -77,6 +79,23 @@ export default function TinChapDetailModal({
       onRefresh();
     }
   };
+
+  // Subscribe to WebSocket payment events for real-time updates
+  useWebSocketEvents(
+    [
+      WebSocketEventType.LICH_SU_TRA_LAI_UPDATED,
+      WebSocketEventType.LICH_SU_TRA_LAI_CREATED,
+      WebSocketEventType.TIN_CHAP_UPDATED
+    ],
+    (data, message) => {
+      console.log('📡 TinChapDetailModal received WebSocket event:', message.type);
+      // Trigger refresh khi có payment events
+      if (isOpen && onRefresh) {
+        onRefresh();
+      }
+    },
+    isOpen // Only subscribe when modal is open
+  );
 
   const processPaymentInterest = async (paymentId: number, amount: number) => {
     await payInterestByRecord(paymentId, amount);

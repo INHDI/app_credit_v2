@@ -9,6 +9,7 @@ import TraGopTable from "./TraGopTable";
 import TraGopPagination from "./TraGopPagination";
 import AddTraGopModal from "./AddTraGopModal";
 import { useTraGop } from "@/hooks/useTraGop";
+import { useTraGopEvents } from "@/hooks/useWebSocket";
 
 export default function Page() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -37,6 +38,13 @@ export default function Page() {
     refreshContracts,
     deleteContract,
   } = useTraGop();
+
+  // Subscribe to WebSocket events for real-time updates
+  useTraGopEvents((data, message) => {
+    console.log('📡 TraGop WebSocket event received:', message.type);
+    // Auto-refresh list when data changes
+    refreshContracts();
+  });
 
   const handleAddContract = async (data: any) => {
     try {

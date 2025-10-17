@@ -6,6 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import { NAVIGATION_SECTIONS } from "@/constants/credit-contract";
 import { useNavigation } from "@/hooks/useNavigation";
 import { useEffect } from "react";
+import WebSocketStatusIndicator from "@/components/websocket/WebSocketStatus";
 
 interface NavigationProps {
   currentPage?: string;
@@ -33,6 +34,9 @@ export default function Navigation({ currentPage, className = "" }: NavigationPr
 
   return (
     <nav className={`h-full overflow-y-auto py-2 ${className}`}>
+      <div className="px-3 mb-4">
+        <WebSocketStatusIndicator />
+      </div>
       <div className="px-3 space-y-1">
         {NAVIGATION_SECTIONS.map((section, sectionIndex) => (
           <div key={section.title} className={sectionIndex > 0 ? "mt-6" : ""}>

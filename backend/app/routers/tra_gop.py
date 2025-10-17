@@ -10,6 +10,7 @@ from app.schemas.tra_gop import TraGopCreate, TraGopResponse, TraGopUpdate, TraG
 from app.schemas.response import ApiResponse
 from app.crud import tra_gop as crud_tra_gop
 from app.utils.id_generator import generate_tra_gop_id
+from app.websocket import manager, EventType, broadcast_tra_gop_event, broadcast_dashboard_update
 
 router = APIRouter(
     prefix="/tra-gop",
@@ -24,6 +25,22 @@ async def create_tra_gop(tra_gop: TraGopCreate, db: Session = Depends(get_db)):
     result = crud_tra_gop.create_tra_gop(db=db, tra_gop=tra_gop, ma_hd=ma_hd)
     # Convert SQLAlchemy model to Pydantic schema
     tra_gop_response = TraGop.model_validate(result)
+    
+    # Broadcast WebSocket event
+    await broadcast_tra_gop_event(
+        manager=manager,
+        event_type=EventType.TRA_GOP_CREATED,
+        tra_gop_data=tra_gop_response.model_dump(mode='json'),
+        message=f"Tạo hợp đồng trả góp {ma_hd} thành công"
+    )
+    
+    # Trigger dashboard update
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "tra_gop_created", "ma_hd": ma_hd},
+        message="Dashboard cần cập nhật sau tạo trả góp mới"
+    )
+    
     return ApiResponse.success_response(data=tra_gop_response, message="Tạo hợp đồng trả góp thành công")
 
 
@@ -69,6 +86,22 @@ async def update_tra_gop(ma_hd: str, tra_gop_update: TraGopUpdate, db: Session =
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng trả góp")
     # Convert SQLAlchemy model to Pydantic schema
     tra_gop_response = TraGop.model_validate(db_tra_gop)
+    
+    # Broadcast WebSocket event
+    await broadcast_tra_gop_event(
+        manager=manager,
+        event_type=EventType.TRA_GOP_UPDATED,
+        tra_gop_data=tra_gop_response.model_dump(mode='json'),
+        message=f"Cập nhật hợp đồng trả góp {ma_hd} thành công"
+    )
+    
+    # Trigger dashboard update
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "tra_gop_updated", "ma_hd": ma_hd},
+        message="Dashboard cần cập nhật sau update trả góp"
+    )
+    
     return ApiResponse.success_response(data=tra_gop_response, message="Cập nhật hợp đồng trả góp thành công")
 
 
@@ -78,5 +111,21 @@ async def delete_tra_gop(ma_hd: str, db: Session = Depends(get_db)):
     success = crud_tra_gop.delete_tra_gop(db=db, ma_hd=ma_hd)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng trả góp")
+    
+    # Broadcast WebSocket event
+    await broadcast_tra_gop_event(
+        manager=manager,
+        event_type=EventType.TRA_GOP_DELETED,
+        tra_gop_data={"MaHD": ma_hd},
+        message=f"Xóa hợp đồng trả góp {ma_hd} thành công"
+    )
+    
+    # Trigger dashboard update
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "tra_gop_deleted", "ma_hd": ma_hd},
+        message="Dashboard cần cập nhật sau xóa trả góp"
+    )
+    
     return ApiResponse.success_response(data={"MaHD": ma_hd}, message="Xóa hợp đồng trả góp thành công")
 

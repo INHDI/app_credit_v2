@@ -66,6 +66,7 @@ export function useThongKe({
     statistics: data,
     loading,
     error,
+    refreshData: fetchData, // Expose refresh function for WebSocket
   };
 }
 
