@@ -21,9 +21,10 @@ class WebSocketService {
   private maxReconnectAttempts: number;
   private reconnectInterval: number;
   private pingInterval: number;
-  private pingTimer: NodeJS.Timeout | null = null;
-  private reconnectTimer: NodeJS.Timeout | null = null;
-  private eventListeners: WebSocketEventListeners = new Map();
+  // Use browser timer IDs (number) to avoid NodeJS namespace issues in the frontend
+  private pingTimer: number | null = null;
+  private reconnectTimer: number | null = null;
+  private eventListeners: WebSocketEventListeners<unknown> = new Map();
   private statusListeners: Set<(status: WebSocketStatus) => void> = new Set();
 
   constructor(options: WebSocketServiceOptions) {
@@ -51,9 +52,9 @@ class WebSocketService {
       this.setStatus(WebSocketStatus.CONNECTING);
       const wsUrl = `${this.url}/${this.clientId}`;
       console.log('[WebSocket] Connecting to:', wsUrl);
-      
+
       this.ws = new WebSocket(wsUrl);
-      
+
       this.ws.onopen = this.handleOpen.bind(this);
       this.ws.onmessage = this.handleMessage.bind(this);
       this.ws.onerror = this.handleError.bind(this);
@@ -72,19 +73,19 @@ class WebSocketService {
     console.log('[WebSocket] Disconnecting...');
     this.reconnectAttempts = this.maxReconnectAttempts; // Prevent reconnection
     this.clearTimers();
-    
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
-    
+
     this.setStatus(WebSocketStatus.DISCONNECTED);
   }
 
   /**
    * Send message to server
    */
-  send(message: Partial<WebSocketMessage>): void {
+  send(message: Partial<WebSocketMessage<unknown>>): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       console.error('[WebSocket] Cannot send message: not connected');
       return;
@@ -101,14 +102,14 @@ class WebSocketService {
   /**
    * Subscribe to an event
    */
-  on<T = any>(event: WebSocketEventType | string, listener: WebSocketEventListener<T>): () => void {
+  on<T = unknown>(event: WebSocketEventType | string, listener: WebSocketEventListener<T>): () => void {
     if (!this.eventListeners.has(event)) {
-      this.eventListeners.set(event, new Set());
+      this.eventListeners.set(event, new Set<WebSocketEventListener<unknown>>());
     }
-    
-    this.eventListeners.get(event)!.add(listener as WebSocketEventListener);
+
+    this.eventListeners.get(event)!.add(listener as WebSocketEventListener<unknown>);
     console.log('[WebSocket] Subscribed to:', event);
-    
+
     // Return unsubscribe function
     return () => this.off(event, listener);
   }
@@ -116,12 +117,12 @@ class WebSocketService {
   /**
    * Unsubscribe from an event
    */
-  off<T = any>(event: WebSocketEventType | string, listener: WebSocketEventListener<T>): void {
+  off<T = unknown>(event: WebSocketEventType | string, listener: WebSocketEventListener<T>): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
-      listeners.delete(listener as WebSocketEventListener);
+      listeners.delete(listener as WebSocketEventListener<unknown>);
       console.log('[WebSocket] Unsubscribed from:', event);
-      
+
       if (listeners.size === 0) {
         this.eventListeners.delete(event);
       }
@@ -135,7 +136,7 @@ class WebSocketService {
     this.statusListeners.add(listener);
     // Immediately call with current status
     listener(this.status);
-    
+
     // Return unsubscribe function
     return () => {
       this.statusListeners.delete(listener);
@@ -171,21 +172,21 @@ class WebSocketService {
    */
   private handleMessage(event: MessageEvent): void {
     try {
-      const message: WebSocketMessage = JSON.parse(event.data);
+      const message: WebSocketMessage<unknown> = JSON.parse(event.data);
       console.log('[WebSocket] 📨 Received:', message.type, message);
-      
+
       // Emit to specific event listeners
       const listeners = this.eventListeners.get(message.type);
       if (listeners) {
         listeners.forEach(listener => {
           try {
-            listener(message.data, message);
+            (listener as WebSocketEventListener<unknown>)(message.data, message);
           } catch (error) {
             console.error('[WebSocket] Listener error:', error);
           }
         });
       }
-      
+
       // Handle special events
       if (message.type === WebSocketEventType.PONG) {
         // Pong received, connection is alive
@@ -225,12 +226,12 @@ class WebSocketService {
 
     this.reconnectAttempts++;
     this.setStatus(WebSocketStatus.RECONNECTING);
-    
+
     console.log(
       `[WebSocket] Reconnecting in ${this.reconnectInterval}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
     );
-    
-    this.reconnectTimer = setTimeout(() => {
+
+    this.reconnectTimer = window.setTimeout(() => {
       this.connect();
     }, this.reconnectInterval);
   }
@@ -240,8 +241,8 @@ class WebSocketService {
    */
   private startPing(): void {
     this.clearPingTimer();
-    
-    this.pingTimer = setInterval(() => {
+
+    this.pingTimer = window.setInterval(() => {
       if (this.isConnected()) {
         this.send({
           type: WebSocketEventType.PING,
@@ -264,8 +265,8 @@ class WebSocketService {
    * Clear ping timer
    */
   private clearPingTimer(): void {
-    if (this.pingTimer) {
-      clearInterval(this.pingTimer);
+    if (this.pingTimer !== null) {
+      window.clearInterval(this.pingTimer);
       this.pingTimer = null;
     }
   }
@@ -274,8 +275,8 @@ class WebSocketService {
    * Clear reconnect timer
    */
   private clearReconnectTimer(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
+    if (this.reconnectTimer !== null) {
+      window.clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
   }
@@ -287,7 +288,7 @@ class WebSocketService {
     if (this.status !== status) {
       this.status = status;
       console.log('[WebSocket] Status changed to:', status);
-      
+
       this.statusListeners.forEach(listener => {
         try {
           listener(status);

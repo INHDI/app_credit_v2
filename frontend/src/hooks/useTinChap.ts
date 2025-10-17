@@ -48,7 +48,7 @@ export interface SummaryCard {
   value: string;
   subtitle: string;
   description: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   gradient: string;
   iconBg: string;
   textColor: string;
@@ -110,8 +110,9 @@ export function useTinChap() {
       } else {
         setContracts([]);
       }
-    } catch (e: any) {
-      setError(e?.message || "Fetch tín chấp thất bại");
+    } catch (e: unknown) {
+      const msg = (e && typeof e === 'object' && 'message' in e) ? (e as any).message : undefined;
+      setError(msg || "Fetch tín chấp thất bại");
       setContracts([]);
     } finally {
       setLoading(false);
@@ -140,7 +141,7 @@ export function useTinChap() {
   // Summary stats based on current filtered list
   const summaryStats = useMemo(() => {
     const totalContracts = filteredContracts.length;
-    const activeContracts = filteredContracts.filter(c => !(c.statusList || []).includes("da_thanh_toan" as any)).length;
+  const activeContracts = filteredContracts.filter(c => !((c.statusList || []) as ContractStatus[]).includes('da_thanh_toan')).length;
     const totaltong_tien_vay = filteredContracts.reduce((sum, c) => sum + (c.tong_tien_vay || 0), 0);
     const totaltien_da_tra = filteredContracts.reduce((sum, c) => sum + (c.total_interest_paid || 0), 0);
     const totaltong_tien_con_lai = filteredContracts.reduce((sum, c) => sum + (c.unpaid_amount || 0), 0);

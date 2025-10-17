@@ -1,6 +1,6 @@
 import { API_CONFIG, ENV_CONFIG, API_HEADERS } from '@/config/config';
 
-export interface BasicApiResponse<T = any> {
+export interface BasicApiResponse<T = unknown> {
   success: boolean;
   data: T;
   message?: string | null;

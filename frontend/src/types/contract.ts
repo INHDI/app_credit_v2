@@ -1,3 +1,5 @@
+import React from 'react';
+
 // Generic contract form data interface
 export interface BaseContractFormData {
   ho_ten: string;
@@ -49,14 +51,14 @@ export interface FieldConfig {
     pattern?: string;
     message?: string;
   };
-  formatValue?: (value: any) => string;
-  parseValue?: (value: string) => any;
+  formatValue?: (value: unknown) => string;
+  parseValue?: (value: string) => unknown;
 }
 
 export interface ContractModalConfig {
   title: string;
   fields: FieldConfig[];
-  defaultValues: Record<string, any>;
+  defaultValues: Record<string, unknown>;
   gridLayout?: {
     cols: number;
     gap: number;

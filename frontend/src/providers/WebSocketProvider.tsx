@@ -13,8 +13,8 @@ interface WebSocketContextValue {
   ws: WebSocketService | null;
   status: WebSocketStatus;
   isConnected: boolean;
-  subscribe: <T = any>(event: WebSocketEventType | string, listener: WebSocketEventListener<T>) => () => void;
-  unsubscribe: <T = any>(event: WebSocketEventType | string, listener: WebSocketEventListener<T>) => void;
+  subscribe: <T = unknown>(event: WebSocketEventType | string, listener: WebSocketEventListener<T>) => () => void;
+  unsubscribe: <T = unknown>(event: WebSocketEventType | string, listener: WebSocketEventListener<T>) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextValue | undefined>(undefined);
@@ -66,7 +66,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   }, [clientId, enabled]);
 
   // Subscribe to event
-  const subscribe = useCallback(<T = any>(
+  const subscribe = useCallback(<T = unknown>(
     event: WebSocketEventType | string, 
     listener: WebSocketEventListener<T>
   ) => {
@@ -78,7 +78,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   }, [ws]);
 
   // Unsubscribe from event
-  const unsubscribe = useCallback(<T = any>(
+  const unsubscribe = useCallback(<T = unknown>(
     event: WebSocketEventType | string, 
     listener: WebSocketEventListener<T>
   ) => {

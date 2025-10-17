@@ -1,5 +1,13 @@
 import { API_CONFIG, API_HEADERS, createApiUrl } from '@/config/config';
 
+// Standard API response shape used by the backend
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data: T;
+  message?: string | null;
+  error?: string | null;
+}
+
 // API Service for managing API calls
 export class ApiService {
   private static async request<T>(
@@ -25,8 +33,8 @@ export class ApiService {
   }
 
   // No Phai Thu API
-  static async getNoPhaiThu(time: string = 'today') {
-    return this.request(API_CONFIG.ENDPOINTS.NO_PHAI_THU, {}, { time });
+  static async getNoPhaiThu(time: string = 'today'): Promise<ApiResponse<unknown>> {
+    return this.request<ApiResponse<unknown>>(API_CONFIG.ENDPOINTS.NO_PHAI_THU, {}, { time });
   }
 
   // Tin Chap API

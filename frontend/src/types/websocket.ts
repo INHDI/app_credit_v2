@@ -40,7 +40,7 @@ export enum WebSocketEventType {
 }
 
 // WebSocket Message Interface
-export interface WebSocketMessage<T = any> {
+export interface WebSocketMessage<T = unknown> {
   type: WebSocketEventType | string;
   data: T;
   message?: string;
@@ -58,12 +58,12 @@ export enum WebSocketStatus {
 }
 
 // Event Listener Type
-export type WebSocketEventListener<T = any> = (data: T, message: WebSocketMessage<T>) => void;
+export type WebSocketEventListener<T = unknown> = (data: T, message: WebSocketMessage<T>) => void;
 
 // Event Listeners Map
-export type WebSocketEventListeners = Map<
+export type WebSocketEventListeners<T = unknown> = Map<
   WebSocketEventType | string,
-  Set<WebSocketEventListener>
+  Set<WebSocketEventListener<T>>
 >;
 
 // WebSocket Service Options
