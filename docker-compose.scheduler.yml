@@ -1,0 +1,17 @@
+services:
+  scheduler:
+    build:
+      context: ./scheduler
+      dockerfile: Dockerfile
+    container_name: app_credit_scheduler
+    restart: unless-stopped
+    volumes:
+      - ./scheduler/logs:/var/log
+    env_file:
+      - ./scheduler/.env
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

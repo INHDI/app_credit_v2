@@ -1,0 +1,5 @@
+# Endpoint cho scheduler chạy trong container (timezone Asia/Ho_Chi_Minh)
+# Điều chỉnh host/port tùy môi trường triển khai.
+TRA_GOP_API_URL=http://10.15.7.22:8000/api/v1/tra-gop/auto-create-daily-all
+TRA_LAI_TIN_CHAP_API_URL=http://10.15.7.22:8000/api/v1/tra-lai-tin-chap/auto-create-daily-all
+RUN_ON_STARTUP=true
