@@ -478,7 +478,7 @@ def auto_create_lich_su(db: Session) -> dict:
                 LichSuTraLai.SoTien > LichSuTraLai.TienDaTra,
                 LichSuTraLai.SoTien != 0
             ).all()
-            
+            so_tien_chua_tra = 0
             # Cập nhật tất cả các kỳ cũ: SoTien = 0, TrangThaiNgayThanhToan = QUA_HAN
             for ls in lich_sus_chua_tra:
                 # Tính số tiền chưa trả TRƯỚC KHI set SoTien = 0
