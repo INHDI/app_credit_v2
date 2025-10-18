@@ -109,7 +109,7 @@ export default function NoPhaiThuTable({
               <th className="text-left p-4 font-semibold text-slate-700 text-sm">Khách hàng</th>
               <th className="text-left p-4 font-semibold text-slate-700 text-sm">Loại hợp đồng</th>
               <th className="text-right p-4 font-semibold text-slate-700 text-sm">Tổng phải trả</th>
-              <th className="text-right p-4 font-semibold text-slate-700 text-sm">Theo kỳ/ngày</th>
+              <th className="text-right p-4 font-semibold text-slate-700 text-sm">Kỳ/ngày</th>
               <th className="text-right p-4 font-semibold text-slate-700 text-sm">Nợ chưa trả</th>
               <th className="text-center p-4 font-semibold text-slate-700 text-sm">Trạng thái</th>
               <th className="text-center p-4 font-semibold text-slate-700 text-sm">Chức năng</th>
@@ -163,7 +163,15 @@ export default function NoPhaiThuTable({
                 </td>
                 <td className="p-4 text-right">
                   <div className="space-y-1">
-                    <div className="font-bold text-amber-600 text-sm">{formatCurrency(contract.tien_can_tra_theo_ky)}</div>
+                    <div className="font-bold text-amber-600 text-sm">
+                      {(() => {
+                        // Nếu là hợp đồng trả góp, chia cho số lần trả
+                        if (contract.loai_hop_dong === 'Trả góp' && contract.raw?.SoLanTra) {
+                          return formatCurrency(contract.tien_can_tra_theo_ky / contract.raw.SoLanTra);
+                        }
+                        return formatCurrency(contract.tien_can_tra_theo_ky);
+                      })()}
+                    </div>
                   </div>
                 </td>
                 <td className="p-4 text-right">
@@ -304,8 +312,17 @@ export default function NoPhaiThuTable({
                 <div className="text-sm font-bold text-slate-800">{formatCurrency(contract.tong_tien_can_tra)}</div>
               </div>
               <div>
-                <div className="text-xs text-slate-500">Theo kỳ/ngày</div>
-                <div className="text-sm font-bold text-amber-600">{formatCurrency(contract.tien_can_tra_theo_ky)}</div>
+                <div className="text-xs text-slate-500">Kỳ/ngày</div>
+                <div className="text-sm font-bold text-amber-600">
+                  {(() => {
+                    console.log(contract.raw);
+                    // Nếu là hợp đồng trả góp, chia cho số lần trả
+                    if (contract.loai_hop_dong === 'Trả góp' && contract.raw?.SoLanTra) {
+                      return formatCurrency(contract.tien_can_tra_theo_ky / contract.raw.SoLanTra);
+                    }
+                    return formatCurrency(contract.tien_can_tra_theo_ky);
+                  })()}
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-slate-500">Nợ chưa trả</div>

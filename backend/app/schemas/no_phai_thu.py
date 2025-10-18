@@ -10,6 +10,7 @@ class NoPhaiThuResponse(BaseModel):
     KyDong: int = Field(..., description="Kỳ đóng (số ngày giữa các kỳ thanh toán)")
     LaiSuat: int = Field(..., description="Lãi suất (số tiền cố định mỗi kỳ, VNĐ)")
     SoTienTraGoc: int = Field(..., description="Số tiền trả gốc")
+    SoLanTra: int = Field(default=0, description="Số lần trả (chỉ áp dụng cho hợp đồng trả góp)")
     TrangThaiThanhToan: str = Field(..., description="Trạng thái thanh toán")
     TrangThaiNgayThanhToan: str = Field(..., description="Trạng thái ngày thanh toán")
     LichSuTraLai: List[Any] = Field(..., description="Lịch sử trả lãi")

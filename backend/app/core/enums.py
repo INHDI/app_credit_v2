@@ -9,6 +9,7 @@ class TrangThaiThanhToan(str, Enum):
     CHUA_THANH_TOAN = "Chưa thanh toán"
     DONG_DU = "Đóng đủ"
     THANH_TOAN_MOT_PHAN = "Thanh toán một phần"
+    CHUA_DONG_DU = "Chưa đóng đủ"
     DA_TAT_TOAN = "Đã tất toán"
     
     @classmethod

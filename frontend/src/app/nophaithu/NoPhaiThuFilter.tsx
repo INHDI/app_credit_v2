@@ -21,6 +21,7 @@ const payStatusOptions = [
   { value: "all", label: "Tất cả trạng thái thanh toán" },
   { value: "Chưa thanh toán", label: "Chưa thanh toán" },
   { value: "Thanh toán một phần", label: "Thanh toán một phần" },
+  { value: "Chưa đóng đủ", label: "Chưa đóng đủ" },
   { value: "Đóng đủ", label: "Đóng đủ" },
   { value: "Đã tất toán", label: "Đã tất toán" },
 ];

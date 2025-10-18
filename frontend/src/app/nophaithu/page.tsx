@@ -113,7 +113,15 @@ export default function NoPhaiThuPage() {
     const payStatus: string = todayRec?.TrangThaiThanhToan || '';
     const dueStatus: string = todayRec?.TrangThaiNgayThanhToan || '';
 
-    const matchesPay = selectedPayStatus === 'all' || payStatus === selectedPayStatus;
+    // Logic cho trạng thái "Chưa đóng đủ" - hiển thị cả "Thanh toán một phần" và "Chưa thanh toán"
+    let matchesPay = false;
+    if (selectedPayStatus === 'all') {
+      matchesPay = true;
+    } else if (selectedPayStatus === 'Chưa đóng đủ') {
+      matchesPay = payStatus === 'Thanh toán một phần' || payStatus === 'Chưa thanh toán';
+    } else {
+      matchesPay = payStatus === selectedPayStatus;
+    }
     const matchesDue = selectedDueStatus === 'all' || dueStatus === selectedDueStatus;
 
     return matchesSearch && matchesPay && matchesDue;

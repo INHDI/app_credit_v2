@@ -55,6 +55,7 @@ def get_no_phai_thus(db: Session, time: str = "today") -> List[NoPhaiThuResponse
             # Derive fields depending on contract type
             if tc:
                 so_tien_tra_goc = tc.SoTienTraGoc
+                so_lan_tra = 0  # Tín chấp không có số lần trả
                 trang_thai = tc.TrangThai
                 ho_ten = tc.HoTen
                 ngay_vay = tc.NgayVay
@@ -89,6 +90,7 @@ def get_no_phai_thus(db: Session, time: str = "today") -> List[NoPhaiThuResponse
                     KyDong=ky_dong,
                     LaiSuat=lai_suat,
                     SoTienTraGoc=so_tien_tra_goc,
+                    SoLanTra=so_lan_tra,
                     TrangThaiThanhToan=trang_thai,
                     TrangThaiNgayThanhToan=trang_thai_ngay_thanh_toan,
                     LichSuTraLai=lich_su_schemas,
