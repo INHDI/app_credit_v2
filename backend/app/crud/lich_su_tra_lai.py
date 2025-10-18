@@ -347,9 +347,9 @@ def auto_create_lich_su(db: Session) -> dict:
         dict: Thông tin kết quả xử lý
     """
     try:
-        # date_now = date.today()
+        date_now = date.today()
         # test với ngày 13/10/2025
-        date_now = date(2025, 10, 17)
+        # date_now = date(2025, 10, 17)
         contracts_processed = 0
         records_created = 0
         records_updated = 0
