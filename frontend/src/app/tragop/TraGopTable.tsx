@@ -101,7 +101,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                   <td className="p-4 text-right">
                     <div className="space-y-1">
                       <div className="font-bold text-slate-800 text-sm">{formatCurrency(contract.SoTienVay || contract.tong_tien_can_tra || 0)}</div>
-                      <div className="text-xs text-slate-500">Lãi: {formatCurrency(contract.LaiSuat || 0)}/kỳ</div>
+                      <div className="text-xs text-slate-500">Lãi: {formatCurrency(contract.LaiSuat || 0)}</div>
                     </div>
                   </td>
                   <td className="p-4 text-right">
@@ -226,7 +226,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                 <div className="text-right">
                   <div className="text-xs text-slate-500">Số tiền vay</div>
                   <div className="text-sm font-bold text-slate-800">{formatCurrency(contract.SoTienVay || contract.tong_tien_can_tra || 0)}</div>
-                  <div className="text-xs text-slate-500">Lãi: {formatCurrency(contract.LaiSuat || 0)}/kỳ</div>
+                  <div className="text-xs text-slate-500">Lãi: {formatCurrency(contract.LaiSuat || 0)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500">Đã trả</div>

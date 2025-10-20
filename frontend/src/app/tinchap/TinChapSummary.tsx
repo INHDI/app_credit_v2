@@ -29,7 +29,10 @@ export default function TinChapSummary() {
       const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.TIN_CHAP}?page=1&page_size=999999&sort_by=NgayVay&sort_dir=desc`;
       const resp = await fetch(url, { headers: { accept: "application/json" } });
       const json = await resp.json();
-      const list: TinChapItem[] = json?.data || [];
+      const data = json?.data;
+      const list: TinChapItem[] = Array.isArray(data)
+        ? data
+        : (Array.isArray(data?.items) ? data.items : []);
 
       const totalContracts = list.length;
       const activeContracts = list.filter((c) => c.TrangThai !== "Đã tất toán").length;

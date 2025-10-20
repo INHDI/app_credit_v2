@@ -134,7 +134,7 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
             so_lan_tra = data_hop_dong.SoLanTra
             ngay_ky_hien_tai = ngay_vay + timedelta(days=ky_dong)  # Kỳ đầu tiên
             
-            for ky_thu in range(1, so_lan_tra + 1):
+            for ky_thu in range(0, so_lan_tra):
                 danh_sach_ky.append({
                     "ngay": ngay_ky_hien_tai,
                     "ky_thu": ky_thu,
@@ -144,7 +144,7 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
         else:
             # Tín Chấp: Tạo kỳ từ NgayVay đến hôm nay (logic cũ)
             ngay_ky_hien_tai = ngay_vay + timedelta(days=ky_dong)  # Kỳ đầu tiên
-            ky_thu = 1
+            ky_thu = 0
             
             while ngay_ky_hien_tai <= date_now:
                 danh_sach_ky.append({
@@ -165,10 +165,14 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
         
         # 7. Tạo các bản ghi lịch sử
         so_ky = len(danh_sach_ky)
+        end_date = danh_sach_ky[-1]["ngay"]
         
         for idx, ky in enumerate(danh_sach_ky):
             # Xác định trạng thái ngày thanh toán dựa trên ngày kỳ
-            if ky["ngay"] == date_now:
+            if loai_hop_dong == "TG" and end_date < date_now:
+                # Trả Góp: Nếu ngày cuối cùng đã quá hạn, tất cả các kỳ đều QUA_HAN
+                trang_thai_ngay = TrangThaiNgayThanhToan.QUA_HAN.value
+            elif ky["ngay"] == date_now:
                 trang_thai_ngay = TrangThaiNgayThanhToan.DEN_HAN.value
             elif ky["ngay"] < date_now:
                 trang_thai_ngay = TrangThaiNgayThanhToan.QUA_HAN.value
@@ -178,7 +182,16 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
             # Tính số tiền dựa trên loại hợp đồng và trạng thái
             if loai_hop_dong == "TG":
                 # Trả Góp: Logic cộng dồn đặc biệt
-                if ky["ngay"] < date_now:
+                if end_date < date_now:
+                    # Nếu ngày cuối cùng đã quá hạn:
+                    # - Các kỳ trước kỳ cuối: SoTien = 0
+                    # - Kỳ cuối cùng: SoTien = tổng cộng dồn tất cả các kỳ
+                    if idx < len(danh_sach_ky) - 1:
+                        so_tien = 0
+                    else:
+                        # Kỳ cuối cùng: cộng dồn tất cả
+                        so_tien = so_tien_moi_ky * so_ky
+                elif ky["ngay"] < date_now:
                     # Các kỳ quá hạn: SoTien = 0
                     so_tien = 0
                 elif ky["ngay"] == date_now:
@@ -187,7 +200,9 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
                     so_tien = so_tien_moi_ky * (so_ky_qua_han + 1)  # +1 cho kỳ hiện tại
                 else:
                     # Các kỳ chưa đến hạn: SoTien = số tiền cố định
-                    so_tien = so_tien_moi_ky
+                    # so_tien = so_tien_moi_ky
+                    so_ky_qua_han = sum(1 for k in danh_sach_ky if k["ngay"] < date_now)
+                    so_tien = so_tien_moi_ky * (so_ky_qua_han + 1)
             else:
                 # Tín Chấp: Logic cộng dồn (các kỳ cũ = 0, kỳ cuối = tổng cộng dồn)
                 tong_tien_cong_don = so_tien_moi_ky * so_ky
@@ -206,6 +221,8 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
         
         # 8. Commit vào database
         db.commit()
+        auto_create_lich_su(db)
+
         
         return {
             "success": True,
@@ -364,7 +381,6 @@ def auto_create_lich_su(db: Session) -> dict:
             # Kiểm tra hôm nay có phải là ngày đóng lãi không
             ky_dong = contract.KyDong
             if (date_now.day - contract.NgayVay.day) % ky_dong != 0:
-                print(ma_hd)
                 continue
             
             # Kiểm tra đã có lịch sử cho ngày hôm nay chưa
@@ -420,7 +436,6 @@ def auto_create_lich_su(db: Session) -> dict:
                 LichSuTraLai.MaHD == ma_hd,
                 LichSuTraLai.Ngay == date_now
             ).first()
-            print(check_ngay_dong_lai)
             if not check_ngay_dong_lai:
                 continue
                 
@@ -459,7 +474,6 @@ def auto_create_lich_su(db: Session) -> dict:
             # Kiểm tra hôm nay có phải là ngày đóng lãi không
             ky_dong = contract.KyDong
             if (date_now.day - contract.NgayVay.day) % ky_dong != 0:
-                print(ma_hd)
                 continue
             
             # Kiểm tra đã có lịch sử cho ngày hôm nay chưa

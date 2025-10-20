@@ -76,6 +76,8 @@ export function useTraGop() {
   const itemsPerPage = 10;
   const [sortBy, setSortBy] = useState<string>("NgayVay");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [apiTotal, setApiTotal] = useState<number | undefined>(undefined);
+  const [apiTotalPages, setApiTotalPages] = useState<number | undefined>(undefined);
 
   const fetchContracts = useCallback(async () => {
     try {
@@ -96,10 +98,25 @@ export function useTraGop() {
       const resp = await fetch(url.toString(), { headers: { accept: "application/json" } });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const json = await resp.json();
-      if (json?.success && Array.isArray(json.data)) {
-        setContracts(json.data as CreditContract[]);
+      if (json?.success) {
+        const data = json.data;
+        if (Array.isArray(data)) {
+          setContracts(data as CreditContract[]);
+          setApiTotal(undefined);
+          setApiTotalPages(undefined);
+        } else if (data && Array.isArray(data.items)) {
+          setContracts(data.items as CreditContract[]);
+          setApiTotal(typeof data.total === 'number' ? data.total : undefined);
+          setApiTotalPages(typeof data.total_pages === 'number' ? data.total_pages : undefined);
+        } else {
+          setContracts([]);
+          setApiTotal(undefined);
+          setApiTotalPages(undefined);
+        }
       } else {
         setContracts([]);
+        setApiTotal(undefined);
+        setApiTotalPages(undefined);
       }
     } catch (e: any) {
       setError(e?.message || "Fetch trả góp thất bại");
@@ -122,8 +139,8 @@ export function useTraGop() {
   // Server-side pagination
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedContracts = filteredContracts;
-  const countAllItems = startIndex + paginatedContracts.length;
-  const totalPages = 0; // unknown
+  const countAllItems = typeof apiTotal === 'number' ? apiTotal : (startIndex + paginatedContracts.length);
+  const totalPages = typeof apiTotalPages === 'number' ? apiTotalPages : 0;
   const safeCurrentPage = currentPage;
   const hasNextPage = paginatedContracts.length === itemsPerPage;
 

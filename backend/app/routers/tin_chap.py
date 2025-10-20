@@ -3,7 +3,7 @@ TinChap API routes
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Any
+from typing import List, Any, Dict
 
 from app.core.database import get_db
 from app.schemas.tin_chap import TinChapCreate, TinChapResponse, TinChapUpdate, TinChap
@@ -44,7 +44,7 @@ async def create_tin_chap(tin_chap: TinChapCreate, db: Session = Depends(get_db)
     return ApiResponse.success_response(data=tin_chap_response, message="Tạo hợp đồng tín chấp thành công")
 
 
-@router.get("", response_model=ApiResponse[List[TinChapResponse]])
+@router.get("", response_model=ApiResponse[Dict[str, Any]])
 async def get_all_tin_chap(
     status: str | None = None,
     page: int = 1,
@@ -55,7 +55,7 @@ async def get_all_tin_chap(
     today_only: bool = False,
     db: Session = Depends(get_db)
     ):
-    """Get all TinChap contracts with filter/search/sort/pagination"""
+    """Get all TinChap contracts with filter/search/sort/pagination with totals"""
     result = crud_tin_chap.get_tin_chaps(
         db=db,
         status=status,

@@ -3,7 +3,7 @@ TraGop API routes
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Any
+from typing import List, Any, Dict
 
 from app.core.database import get_db
 from app.schemas.tra_gop import TraGopCreate, TraGopResponse, TraGopUpdate, TraGop
@@ -44,7 +44,7 @@ async def create_tra_gop(tra_gop: TraGopCreate, db: Session = Depends(get_db)):
     return ApiResponse.success_response(data=tra_gop_response, message="Tạo hợp đồng trả góp thành công")
 
 
-@router.get("", response_model=ApiResponse[List[TraGopResponse]])
+@router.get("", response_model=ApiResponse[Dict[str, Any]])
 async def get_all_tra_gop(
     status: str | None = None,
     page: int = 1,
@@ -55,7 +55,7 @@ async def get_all_tra_gop(
     today_only: bool = False,
     db: Session = Depends(get_db)
 ):
-    """Get all TraGop contracts with filter/search/sort/pagination"""
+    """Get all TraGop contracts with filter/search/sort/pagination with totals"""
     result = crud_tra_gop.get_tra_gops(
         db=db,
         status=status,

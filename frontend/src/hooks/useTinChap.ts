@@ -83,6 +83,9 @@ export function useTinChap() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const itemsPerPage = 10;
+  // Totals from API for proper pagination footer
+  const [apiTotal, setApiTotal] = useState<number | undefined>(undefined);
+  const [apiTotalPages, setApiTotalPages] = useState<number | undefined>(undefined);
 
   const fetchContracts = useCallback(async () => {
     try {
@@ -105,10 +108,28 @@ export function useTinChap() {
         throw new Error(`HTTP ${resp.status}`);
       }
       const json = await resp.json();
-      if (json?.success && Array.isArray(json.data)) {
-        setContracts(json.data as CreditContract[]);
+      if (json?.success) {
+        // Support both legacy array shape and new { items, total, total_pages }
+        const data = json.data;
+        if (Array.isArray(data)) {
+          setContracts(data as CreditContract[]);
+          // fall back: no totals available
+          setApiTotal(undefined);
+          setApiTotalPages(undefined);
+        } else if (data && Array.isArray(data.items)) {
+          setContracts(data.items as CreditContract[]);
+          // store totals in closures via locals
+          setApiTotal(typeof data.total === 'number' ? data.total : undefined);
+          setApiTotalPages(typeof data.total_pages === 'number' ? data.total_pages : undefined);
+        } else {
+          setContracts([]);
+          setApiTotal(undefined);
+          setApiTotalPages(undefined);
+        }
       } else {
         setContracts([]);
+        setApiTotal(undefined);
+        setApiTotalPages(undefined);
       }
     } catch (e: unknown) {
       const msg = (e && typeof e === 'object' && 'message' in e) ? (e as any).message : undefined;
@@ -133,8 +154,8 @@ export function useTinChap() {
   // Server-side pagination: current list is already paginated from API
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedContracts = filteredContracts;
-  const countAllItems = startIndex + paginatedContracts.length; // best-effort without total
-  const totalPages = 0; // unknown total
+  const countAllItems = typeof apiTotal === 'number' ? apiTotal : (startIndex + paginatedContracts.length);
+  const totalPages = typeof apiTotalPages === 'number' ? apiTotalPages : 0;
   const safeCurrentPage = currentPage;
   const hasNextPage = paginatedContracts.length === itemsPerPage;
 

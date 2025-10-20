@@ -45,7 +45,7 @@ def get_tra_gops(
     sort_by: str = "NgayVay",
     sort_dir: str = "desc",
     today_only: bool = False,
-) -> List[TraGopResponse]:
+) -> dict:
     """
     Get TraGop contracts with filter/search/sort/pagination and enrich with lịch sử + totals.
     """
@@ -77,6 +77,9 @@ def get_tra_gops(
     else:
         query = query.order_by(sort_column.desc())
 
+    # Count BEFORE pagination
+    total = query.count()
+
     page = max(1, page)
     page_size = max(1, page_size)
     offset = (page - 1) * page_size
@@ -103,7 +106,14 @@ def get_tra_gops(
             )
         )
 
-    return results
+    total_pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+    return {
+        "items": results,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 def get_tra_gop_with_history(db: Session, ma_hd: str) -> Optional[TraGopResponse]:

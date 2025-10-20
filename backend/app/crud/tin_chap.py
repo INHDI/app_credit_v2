@@ -122,7 +122,7 @@ def get_tin_chaps(
     sort_by: str = "NgayVay",
     sort_dir: str = "desc",
     today_only: bool = False,
-) -> List[TinChapResponse]:
+) -> dict:
     """
     Get TinChap contracts with filter/search/sort/pagination and payment history
     """
@@ -154,6 +154,9 @@ def get_tin_chaps(
         else:
             query = query.order_by(sort_column.desc())
 
+        # Count BEFORE pagination
+        total = query.count()
+
         page = max(1, page)
         page_size = max(1, page_size)
         offset = (page - 1) * page_size
@@ -183,7 +186,15 @@ def get_tin_chaps(
                 )
             )
 
-        return results
+        # Build paginated payload
+        total_pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+        return {
+            "items": results,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+        }
     except Exception as e:
         raise
 

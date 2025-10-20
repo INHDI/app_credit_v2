@@ -29,7 +29,10 @@ export default function TraGopSummary() {
       const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.TRA_GOP}?page=1&page_size=999999&sort_by=NgayVay&sort_dir=desc`;
       const resp = await fetch(url, { headers: { accept: "application/json" } });
       const json = await resp.json();
-      const list: TraGopItem[] = json?.data || [];
+      const data = json?.data;
+      const list: TraGopItem[] = Array.isArray(data)
+        ? data
+        : (Array.isArray(data?.items) ? data.items : []);
 
       const totalContracts = list.length;
       const activeContracts = list.filter((c) => c.TrangThai !== "Đã tất toán").length;
