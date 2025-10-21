@@ -50,7 +50,7 @@ async def get_all_tin_chap(
     page: int = 1,
     page_size: int = 10,
     search: str | None = None,
-    sort_by: str = "NgayVay",
+    sort_by: str = "MaHD",
     sort_dir: str = "desc",
     today_only: bool = False,
     db: Session = Depends(get_db)

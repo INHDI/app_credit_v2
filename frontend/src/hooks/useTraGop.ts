@@ -74,7 +74,7 @@ export function useTraGop() {
   const [selectedloai_hop_dong, setSelectedloai_hop_dong] = useState<string>("all");
 
   const itemsPerPage = 10;
-  const [sortBy, setSortBy] = useState<string>("NgayVay");
+  const [sortBy, setSortBy] = useState<string>("MaHD");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [apiTotal, setApiTotal] = useState<number | undefined>(undefined);
   const [apiTotalPages, setApiTotalPages] = useState<number | undefined>(undefined);

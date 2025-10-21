@@ -79,7 +79,7 @@ export function useTinChap() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedTimeRange, setSelectedTimeRange] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("NgayVay");
+  const [sortBy, setSortBy] = useState<string>("MaHD");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const itemsPerPage = 10;

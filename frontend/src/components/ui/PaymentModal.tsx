@@ -37,9 +37,10 @@ export default function PaymentModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
-  const parsedPartial = Math.max(0, parseFloat(partialAmount) || 0);
-  const cappedPartial = Math.min(parsedPartial, paymentAmount);
-  const remainingAfterPartial = Math.max(0, paymentAmount - cappedPartial);
+  // Sanitize input: treat dots/commas/spaces as thousand separators
+  const digitsOnly = (partialAmount || '').replace(/[^0-9]/g, '');
+  const parsedPartial = Math.max(0, Number(digitsOnly) || 0);
+  const remainingAfterPartial = Math.max(0, paymentAmount - parsedPartial);
 
   const handlePayment = async () => {
     setLoading(true);
@@ -52,10 +53,6 @@ export default function PaymentModal({
         const parsedAmount = parsedPartial;
         if (isNaN(parsedAmount) || parsedAmount <= 0) {
           setError('Vui lòng nhập số tiền hợp lệ');
-          return;
-        }
-        if (parsedAmount > paymentAmount) {
-          setError('Số tiền thanh toán không được vượt quá số tiền lãi');
           return;
         }
         amountToPay = parsedAmount;
@@ -170,13 +167,16 @@ export default function PaymentModal({
             <div className="relative">
               <Input
                 id="partialAmount"
-                type="number"
+                type="text"
                 value={partialAmount}
-                onChange={(e) => setPartialAmount(e.target.value)}
-                placeholder={`Nhập số tiền (≤ ${formatCurrency(paymentAmount)})`}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const cleaned = raw.replace(/[^0-9]/g, '');
+                  setPartialAmount(cleaned);
+                }}
+                placeholder={`Nhập số tiền`}
                 className="pr-16 bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                 min="0"
-                max={paymentAmount}
                 step="1000"
               />
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-slate-500 font-medium">
@@ -187,7 +187,7 @@ export default function PaymentModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div className="flex items-center justify-between bg-white rounded-md px-3 py-2 border border-slate-200">
                 <span className="text-slate-600">Sẽ thanh toán</span>
-                <span className="font-semibold text-slate-900">{formatCurrency(Math.min(parsedPartial || 0, paymentAmount))}</span>
+                <span className="font-semibold text-slate-900">{formatCurrency(parsedPartial || 0)}</span>
               </div>
               <div className="flex items-center justify-between bg-white rounded-md px-3 py-2 border border-slate-200">
                 <span className="text-slate-600">Còn lại</span>
@@ -219,7 +219,7 @@ export default function PaymentModal({
           </Button>
           <Button
             onClick={handlePayment}
-            disabled={loading || (paymentType === 'partial' && (!partialAmount || parseFloat(partialAmount) <= 0))}
+            disabled={loading || (paymentType === 'partial' && parsedPartial <= 0)}
             className="flex-1 h-11 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? (

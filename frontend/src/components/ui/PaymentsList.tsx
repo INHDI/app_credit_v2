@@ -76,7 +76,7 @@ export default function PaymentsList({ items, onPayClick, disablePayWhen }: Paym
               <div className="flex items-center gap-2 self-end sm:self-auto">
                 <Badge className={`${payClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiThanhToan}</Badge>
                 <Badge className={`${dueClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiNgayThanhToan}</Badge>
-                {onPayClick && !isPaid && !disablePay && (
+                {onPayClick && !disablePay && (
                   <Button
                     size="sm"
                     onClick={() => onPayClick(Number(id), remain)}
