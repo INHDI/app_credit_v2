@@ -314,30 +314,30 @@ export default function ThongKe() {
       {
         title: "Tổng giải ngân",
         value: formatCurrency(totals.chi),
-        subtitle: "Vốn đã cấp trong giai đoạn",
+        subtitle: "Tiền chi ra để cho vay",
         tone: metricTone[0],
       },
       {
         title: "Thu thực tế",
         value: formatCurrency(totals.thu),
-        subtitle: "Khoản đã thu từ các hợp đồng",
+        subtitle: "Tiền thực tế đã thu",
         tone: metricTone[1],
       },
       {
-        title: "Lãi ghi nhận",
-        value: formatCurrency(totals.lai),
-        subtitle: "Lãi thực thu",
+        title: "Dự kiến thu được",
+        value: formatCurrency(summary?.total_expected || 0),
+        subtitle: "Tiền gốc + tiền lãi",
         tone: metricTone[2],
       },
       {
         title: "Dòng tiền ròng",
         value: formatCurrency(totals.net),
-        subtitle: "Thu - Giải ngân",
+        subtitle: "Thu thực tế - Tổng giải ngân",
         tone: totals.net >= 0 ? metricTone[1] : metricTone[3],
         delta: totals.net >= 0 ? { value: "Dương", trend: "up" as const } : { value: "Âm", trend: "down" as const },
       },
     ];
-  }, [totals]);
+  }, [totals, summary]);
 
   const secondaryMetrics = useMemo(() => {
     return [

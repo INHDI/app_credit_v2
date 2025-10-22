@@ -306,6 +306,12 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
         tenKhachHang={selectedForSettle?.HoTen || selectedForSettle?.ten_khach_hang}
         onSettled={onSettled}
         paymentHistory={selectedForSettle?.LichSuTraLai}
+        contractType="tra_gop"
+        contract={{
+          SoTienVay: selectedForSettle?.SoTienVay || selectedForSettle?.tong_tien_vay,
+          LaiConLai: selectedForSettle?.LaiConLai || selectedForSettle?.lai_con_lai,
+          TongTienVayVaLai: selectedForSettle?.TongTienVayVaLai || selectedForSettle?.tong_tien_vay_va_lai
+        }}
       />
       {/* Detail Modal */}
       <TraGopDetailModal

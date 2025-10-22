@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/utils/formatters";
-import { AlertTriangle, CheckCircle, FileText } from "lucide-react";
+import { AlertTriangle, CheckCircle, FileText, Calculator } from "lucide-react";
 import { payFullByContract } from "@/services/paymentApi";
 
 interface PaymentHistoryItem {
@@ -24,6 +24,13 @@ interface SettleConfirmModalProps {
   onSettled?: () => void;
   // For Tra Gop: Pass payment history data
   paymentHistory?: any[];
+  contractType?: 'tin_chap' | 'tra_gop';
+  // Contract details for calculation
+  contract?: {
+    SoTienVay?: number;
+    LaiConLai?: number;
+    TongTienVayVaLai?: number;
+  };
 }
 
 export default function SettleConfirmModal({
@@ -33,11 +40,16 @@ export default function SettleConfirmModal({
   tenKhachHang,
   onSettled,
   paymentHistory,
+  contractType = 'tra_gop',
+  contract,
 }: SettleConfirmModalProps) {
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [items, setItems] = useState<PaymentHistoryItem[]>([]);
   const [done, setDone] = useState(false);
+  
+  // Settlement amount states
+  const [interestInput, setInterestInput] = useState<string>('');
 
   useEffect(() => {
     if (!isOpen || !maHopDong) return;
@@ -85,12 +97,20 @@ export default function SettleConfirmModal({
     [unpaid]
   );
 
+  // Calculate settlement amounts
+  const principalAmount = contract?.SoTienVay || 0;
+  const interestAmount = contract?.LaiConLai || unpaidTotal;
+  
+  const principalValue = principalAmount; // Sử dụng gốc từ hợp đồng
+  const interestValue = parseFloat(interestInput.replace(/[^0-9]/g, '')) || 0;
+  const totalSettlementAmount = principalValue + interestValue;
+
   const handleConfirm = async () => {
     if (!maHopDong) return;
     setLoading(true);
     try {
-      // Call API to settle the contract
-      const response = await payFullByContract(maHopDong);
+      // Call API to settle the contract with optional interest amount
+      const response = await payFullByContract(maHopDong, interestValue);
       
       if (response.success) {
         setDone(true);
@@ -111,22 +131,17 @@ export default function SettleConfirmModal({
     }
   };
 
+  const contractTypeLabel = contractType === 'tin_chap' ? 'tín chấp' : 'trả góp';
+  
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Xác nhận tất toán hợp đồng"
+      title={`Xác nhận tất toán hợp đồng ${contractTypeLabel}`}
       size="md"
     >
-      <div className="p-6 space-y-6">
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
-          <div>
-            <p className="text-sm text-slate-700">
-              Hành động này sẽ đánh dấu tất cả các kỳ chưa thanh toán của hợp đồng là "đã thanh toán".
-            </p>
-          </div>
-        </div>
+      <>
+        <div className="p-6 space-y-6">
 
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
           <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
@@ -142,51 +157,97 @@ export default function SettleConfirmModal({
               <div className="text-slate-600">Khách hàng</div>
               <div className="font-medium text-slate-800">{tenKhachHang || '-'}</div>
             </div>
+            
             <div>
-              <div className="text-slate-600">Số kỳ chưa thanh toán</div>
-              <div className="font-semibold text-amber-700">
-                {historyLoading ? 'Đang tải...' : unpaid.length}
+              <div className="text-slate-600">Lãi còn lại</div>
+              <div className="font-semibold text-orange-700">
+                {formatCurrency(interestAmount)}
               </div>
             </div>
             <div>
-              <div className="text-slate-600">Số tiền tất toán</div>
+              <div className="text-slate-600">Tổng cần trả</div>
               <div className="font-bold text-red-700 text-lg">
-                {historyLoading ? 'Đang tải...' : formatCurrency(unpaidTotal)}
+                {formatCurrency(principalAmount + interestAmount)}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Payment Details */}
-        {unpaid.length > 0 && (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200">
-            <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-amber-600" />
-              Chi tiết các kỳ chưa thanh toán
-            </h4>
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {unpaid.map((item, index) => (
-                <div key={`unpaid-${item.id}`} className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center">
-                      <span className="text-xs font-semibold text-amber-700">{index + 1}</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-800 text-sm">{new Date(item.thoi_gian).toLocaleDateString('vi-VN')}</p>
-                      <p className="text-xs text-slate-600">{item.noi_dung}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-amber-700 text-sm">{formatCurrency(item.so_tien - item.so_tien_tra)}</p>
-                    {item.so_tien_tra > 0 && (
-                      <p className="text-xs text-slate-500">Đã trả: {formatCurrency(item.so_tien_tra)}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
+        {/* Settlement Input */}
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
+          <h4 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <FileText className="h-4 w-4 text-emerald-600" />
+            Nhập số tiền lãi tất toán
+          </h4>
+          
+          <div className="space-y-4">
+            {/* Gốc cố định */}
+            <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Số tiền gốc (VNĐ)
+              </label>
+              <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-300">
+                <span className="font-medium text-slate-800">{formatCurrency(principalAmount)}</span>
+              </div>
+            </div>
+            
+            {/* Lãi có thể nhập */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Số tiền lãi (VNĐ) - Nhập từ bàn phím
+              </label>
+              <input
+                type="text"
+                value={interestInput}
+                onChange={(e) => setInterestInput(e.target.value)}
+                placeholder="Nhập số tiền lãi..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Lãi hiện tại: {formatCurrency(interestAmount)} | Để trống = không trả lãi
+              </p>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Settlement Summary */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+          <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <Calculator className="h-4 w-4 text-blue-600" />
+            Tổng kết tất toán
+          </h4>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">Gốc (cố định):</span>
+              <span className="text-sm font-medium text-slate-800">
+                {formatCurrency(principalValue)}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">Lãi (nhập):</span>
+              <span className="text-sm font-medium text-slate-800">
+                {formatCurrency(interestValue)}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center border-t pt-2">
+              <span className="text-sm font-bold text-slate-800">Tổng cộng:</span>
+              <span className="text-lg font-bold text-blue-700">
+                {formatCurrency(totalSettlementAmount)}
+              </span>
+            </div>
+            
+            {interestValue === 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+                <p className="text-xs text-amber-700">
+                  ℹ️ Chỉ trả gốc, không trả lãi
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
 
         {done && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
@@ -206,13 +267,14 @@ export default function SettleConfirmModal({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={loading || historyLoading || unpaid.length === 0}
+            disabled={loading || historyLoading}
             className="rounded-xl shadow-lg px-6 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
           >
             {loading ? 'Đang tất toán...' : 'Xác nhận tất toán'}
           </Button>
         </div>
       </div>
+      </>
     </Modal>
   );
 }

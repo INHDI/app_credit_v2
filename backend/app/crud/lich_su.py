@@ -328,11 +328,15 @@ def get_financial_statistics(
     summary_collected = sum(item["tong_tien_thu"] for item in trend)
     summary_interest = sum(item["tong_tien_lai"] for item in trend)
     
+    # Calculate expected total (principal + interest)
+    summary_expected = summary_disbursed + summary_interest
+    
     summary = {
         "total_disbursed": float(summary_disbursed),
         "total_collected": float(summary_collected),
         "total_interest": float(summary_interest),
-        "net_cash_flow": float(summary_collected - summary_disbursed),
+        "total_expected": float(summary_expected),  # New field: principal + interest
+        "net_cash_flow": float(summary_collected - summary_disbursed),  # Real money - disbursed
         "active_contracts": len(active_contracts),
         "overdue_contracts": len(overdue_contracts),
         "overdue_amount": float(overdue_amount),

@@ -61,6 +61,7 @@ export default function TraGopDetailModal({
           TrangThaiThanhToan: item.TrangThaiThanhToan,
           TrangThaiNgayThanhToan: item.TrangThaiNgayThanhToan,
           ghi_chu: item.NoiDung,
+          NoiDung: item.NoiDung, // Add NoiDung field for PaymentsList component
           created_at: undefined,
         }));
       }

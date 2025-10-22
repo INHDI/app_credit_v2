@@ -13,6 +13,7 @@ export interface ThongKeSummary {
   total_disbursed: number;
   total_collected: number;
   total_interest: number;
+  total_expected: number;  // New field: principal + interest
   net_cash_flow: number;
   active_contracts: number;
   overdue_contracts: number;

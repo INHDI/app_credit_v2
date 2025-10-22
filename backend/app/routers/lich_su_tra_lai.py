@@ -141,10 +141,17 @@ async def auto_create_lich_su(db: Session = Depends(get_db)):
 @router.post("/pay-full/{ma_hd}", response_model=ApiResponse[Any])
 async def pay_full_lich_su(
     ma_hd: str,
+    tien_lai: int = 0,
     db: Session = Depends(get_db)
 ):
-    """Pay full payment history records for a specific contract"""
-    result = crud_lich_su.tat_toan_hop_dong(db=db, ma_hd=ma_hd)
+    """Pay full payment history records for a specific contract.
+
+    Optional query param `tien_lai` allows specifying how much interest is being paid now.
+    If `tien_lai` < required interest, the system will allocate this interest across
+    history records similar to `pay_lich_su` logic and will NOT force full settlement.
+    If `tien_lai` >= required interest, the behavior remains as before (full settlement).
+    """
+    result = crud_lich_su.tat_toan_hop_dong(db=db, ma_hd=ma_hd, tien_lai=tien_lai)
     
     # Broadcast WebSocket event cho tất toán
     await broadcast_lich_su_tra_lai_event(

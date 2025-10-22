@@ -12,6 +12,7 @@ interface PaymentRecord {
   Ngay?: string;
   ngay_tra_lai?: string;
   NoiDung?: string;
+  ghi_chu?: string;
   so_tien_lai?: number;
   so_tien_tra?: number;
   SoTien?: number;
@@ -28,13 +29,21 @@ interface PaymentsListProps {
 
 export default function PaymentsList({ items, onPayClick, disablePayWhen }: PaymentsListProps) {
   const safeItems = Array.isArray(items) ? items : [];
+  
+  // Get today's date for button visibility logic
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  // Sort: Status priority (Đến hạn > Chưa đến hạn > Quá hạn) then by time (ascending)
   const sorted = [...safeItems].sort((a, b) => {
     const pa = getDuePriority(a.TrangThaiNgayThanhToan || "");
     const pb = getDuePriority(b.TrangThaiNgayThanhToan || "");
     if (pa !== pb) return pa - pb;
+    
+    // Within same status, sort by time ascending (earliest first)
     const da = new Date(a.Ngay || (a as any).ngay_tra_lai || 0).getTime();
     const db = new Date(b.Ngay || (b as any).ngay_tra_lai || 0).getTime();
-    return db - da;
+    return da - db; // Changed from db - da to da - db for ascending order
   });
 
   if (sorted.length === 0) {
@@ -59,6 +68,11 @@ export default function PaymentsList({ items, onPayClick, disablePayWhen }: Paym
 
         const id = (payment as any).Stt ?? payment.id ?? idx;
         const dateStr = new Date(payment.Ngay || (payment as any).ngay_tra_lai).toLocaleDateString('vi-VN');
+        
+        // Check if payment date is today for button visibility
+        const paymentDate = new Date(payment.Ngay || (payment as any).ngay_tra_lai);
+        const paymentDateStr = paymentDate.toISOString().split('T')[0];
+        const isToday = paymentDateStr === todayStr;
 
         return (
           <div key={`payments-list-${id}`} className="bg-white rounded-lg p-3 sm:p-4 border border-slate-200">
@@ -69,14 +83,14 @@ export default function PaymentsList({ items, onPayClick, disablePayWhen }: Paym
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-800 text-sm sm:text-base truncate">{dateStr}</p>
-                  <p className="text-xs sm:text-sm text-slate-600 truncate">{payment.NoiDung}</p>
+                  <p className="text-xs sm:text-sm text-slate-600 truncate">{payment.NoiDung || payment.ghi_chu || ''}</p>
                   <p className="text-xs sm:text-sm text-slate-500 truncate">Số tiền: {formatCurrency(Number(soTien))} | Đã trả: {formatCurrency(Number(daTra))}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 self-end sm:self-auto">
                 <Badge className={`${payClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiThanhToan}</Badge>
                 <Badge className={`${dueClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiNgayThanhToan}</Badge>
-                {onPayClick && !disablePay && (
+                {onPayClick && !disablePay && isToday && (
                   <Button
                     size="sm"
                     onClick={() => onPayClick(Number(id), remain)}
