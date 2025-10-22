@@ -16,7 +16,13 @@ touch "$LOG_FILE"
 log "=========================================="
 log "Starting daily payments creation..."
 
-# API endpoints from environment variables
+# Load environment snapshot if exists (for cron runs)
+if [ -f /app/.container_env ]; then
+    # shellcheck source=/dev/null
+    . /app/.container_env
+fi
+
+# API endpoints from environment variables (after sourcing)
 TRA_GOP_URL="${TRA_GOP_API_URL}"
 TIN_CHAP_URL="${TRA_LAI_TIN_CHAP_API_URL}"
 
@@ -33,11 +39,27 @@ call_api() {
     log "Calling $label API..."
 
     set +e
-    response=$(curl -s -w "HTTPSTATUS:%{http_code}" -X 'POST' \
-      "${url}" \
-      -H 'accept: application/json' \
-      -d '')
-    curl_exit=$?
+    # Retry up to 5 times with exponential backoff to tolerate backend cold starts
+    attempt=1
+    max_attempts=5
+    backoff=2
+    while true; do
+        response=$(curl -s -w "HTTPSTATUS:%{http_code}" -X 'POST' \
+          "${url}" \
+          -H 'accept: application/json' \
+          -d '')
+        curl_exit=$?
+        if [ $curl_exit -eq 0 ]; then
+            break
+        fi
+        if [ $attempt -ge $max_attempts ]; then
+            break
+        fi
+        log "WARN: $label curl failed (exit $curl_exit). Retry $attempt/$max_attempts after ${backoff}s"
+        sleep "$backoff"
+        attempt=$((attempt+1))
+        backoff=$((backoff*2))
+    done
     set -e
 
     if [ $curl_exit -ne 0 ]; then

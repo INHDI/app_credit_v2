@@ -19,7 +19,8 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/run_daily_payments.sh /app/entrypoint.sh
 
 # Create crontab file - 0:00 AM Vietnam time every day
-RUN echo "0 0 * * * /app/run_daily_payments.sh >> /var/log/daily_payments.log 2>&1" > /etc/crontabs/root
+# We do not redirect here because the script already logs into /var/log/daily_payments.log
+RUN echo "0 0 * * * . /app/.container_env 2>/dev/null || true; /app/run_daily_payments.sh" > /etc/crontabs/root
 
 # Create log file
 RUN touch /var/log/daily_payments.log

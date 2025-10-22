@@ -8,6 +8,11 @@ LOG_FILE="/var/log/daily_payments.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 touch "$LOG_FILE"
 
+# Persist selected environment variables for cron executions
+# Cron runs with a minimal environment, so we export the variables we need
+ENV_SNAPSHOT="/app/.container_env"
+env | grep -E '^(URL_API_BACKEND|TRA_GOP_API_URL|TRA_LAI_TIN_CHAP_API_URL|RUN_ON_STARTUP)=' > "$ENV_SNAPSHOT" 2>/dev/null || true
+
 log_start() {
   echo "$(date '+%Y-%m-%d %H:%M:%S %Z'): $1" | tee -a "$LOG_FILE"
 }
