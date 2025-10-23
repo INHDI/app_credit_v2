@@ -34,7 +34,7 @@ def _calculate_payment_info(db: Session, ma_hd: str) -> dict:
     # since TinChap only pays interest, not principal
     tin_chap = db.query(TinChap).filter(TinChap.MaHD == ma_hd).first()
     if tin_chap:
-        goc_con_lai = tin_chap.SoTienVay  # For TinChap, principal is never paid
+        goc_con_lai = tin_chap.SoTienVay - tin_chap.SoTienTraGoc  # SoTienVay - SoTienTraGoc
     else:
         goc_con_lai = 0
     

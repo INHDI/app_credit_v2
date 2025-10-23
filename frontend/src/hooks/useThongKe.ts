@@ -45,10 +45,9 @@ export function useThongKe({
   const totals = useMemo(() => {
     const chi = data?.summary?.total_disbursed ?? 0;
     const thu = data?.summary?.total_collected ?? 0;
-    const lai = data?.summary?.total_interest ?? 0;
     const net = data?.summary?.net_cash_flow ?? 0;
     const overdueAmount = data?.summary?.overdue_amount ?? 0;
-    return { chi, thu, lai, net, overdueAmount };
+    return { chi, thu, net, overdueAmount };
   }, [data]);
 
   const series = useMemo(() => {

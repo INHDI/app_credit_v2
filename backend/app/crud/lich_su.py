@@ -137,6 +137,7 @@ def _load_contract(db: Session, ma_hd: str) -> Optional[Dict]:
                 "interest_per_period": contract.LaiSuat,
                 "so_tien_vay": contract.SoTienVay,
                 "ngay_vay": contract.NgayVay,
+                "so_tien_tra_goc": contract.SoTienTraGoc,
             }
     elif ma_hd.startswith("TG"):
         contract = db.query(TraGop).filter(TraGop.MaHD == ma_hd).first()
@@ -200,8 +201,8 @@ def get_financial_statistics(
         "tong_tien_chi": 0.0,  # Disbursed (SoTienVay)
         "tong_tien_thu": 0.0,  # Collected (TienDaTra)
         "tong_tien_lai": 0.0,  # Interest
-        "breakdown": {"tin_chap": 0.0, "tra_gop": 0.0}
     })
+    summary_expected = 0.0
     
     # Get all contracts in date range
     tin_chaps = db.query(TinChap).filter(
@@ -219,13 +220,16 @@ def get_financial_statistics(
         bucket_key = _get_bucket_key(tc.NgayVay, granularity)
         trend_buckets[bucket_key]["bucket"] = bucket_key
         trend_buckets[bucket_key]["tong_tien_chi"] += float(tc.SoTienVay)
-        trend_buckets[bucket_key]["breakdown"]["tin_chap"] += float(tc.SoTienVay)
+        if tc.SoTienTraGoc > 0:
+            trend_buckets[bucket_key]["tong_tien_thu"] += float(tc.SoTienTraGoc)
+        summary_expected += float(tc.SoTienVay)
     
     for tg in tra_gops:
         bucket_key = _get_bucket_key(tg.NgayVay, granularity)
         trend_buckets[bucket_key]["bucket"] = bucket_key
         trend_buckets[bucket_key]["tong_tien_chi"] += float(tg.SoTienVay)
-        trend_buckets[bucket_key]["breakdown"]["tra_gop"] += float(tg.SoTienVay)
+        summary_expected += float(tg.SoTienVay) + float(tg.LaiSuat)
+
     
     # Calculate collected amount and interest from payment history
     paid_records = db.query(LichSuTraLai).filter(
@@ -233,13 +237,13 @@ def get_financial_statistics(
         LichSuTraLai.Ngay <= end_date,
         or_(
             LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.DONG_DU.value,
-            LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.DA_TAT_TOAN.value
+            LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
         )
     ).all()
     
     breakdown = {
-        "tin_chap": {"disbursed": 0.0, "collected": 0.0, "interest": 0.0},
-        "tra_gop": {"disbursed": 0.0, "collected": 0.0, "interest": 0.0}
+        "tin_chap": {"disbursed": 0.0, "collected": 0.0},
+        "tra_gop": {"disbursed": 0.0, "collected": 0.0}
     }
     
     for record in paid_records:
@@ -252,18 +256,19 @@ def get_financial_statistics(
         
         bucket_key = _get_bucket_key(record.Ngay, granularity)
         paid_amount = float(record.TienDaTra)
-        interest_amount = float(contract["interest_per_period"])
         ctype = contract["contract_type"]
         
         # Add to trend
         trend_buckets[bucket_key]["bucket"] = bucket_key
-        trend_buckets[bucket_key]["tong_tien_thu"] += paid_amount
-        trend_buckets[bucket_key]["tong_tien_lai"] += interest_amount
+        # trend_buckets[bucket_key]["tong_tien_thu"] += paid_amount
         
         # Add to breakdown
         breakdown[ctype]["collected"] += paid_amount
-        breakdown[ctype]["interest"] += interest_amount
-    
+        if ctype == "tin_chap":
+            summary_expected += float(record.SoTien)
+            trend_buckets[bucket_key]["tong_tien_thu"] += float(record.TienDaTra)
+        else:
+            trend_buckets[bucket_key]["tong_tien_thu"] += float(record.TienDaTra)
     # Add disbursed to breakdown
     for tc in tin_chaps:
         breakdown["tin_chap"]["disbursed"] += float(tc.SoTienVay)
@@ -326,15 +331,13 @@ def get_financial_statistics(
     # Calculate summary
     summary_disbursed = sum(item["tong_tien_chi"] for item in trend)
     summary_collected = sum(item["tong_tien_thu"] for item in trend)
-    summary_interest = sum(item["tong_tien_lai"] for item in trend)
     
     # Calculate expected total (principal + interest)
-    summary_expected = summary_disbursed + summary_interest
+    # summary_expected += summary_disbursed
     
     summary = {
         "total_disbursed": float(summary_disbursed),
         "total_collected": float(summary_collected),
-        "total_interest": float(summary_interest),
         "total_expected": float(summary_expected),  # New field: principal + interest
         "net_cash_flow": float(summary_collected - summary_disbursed),  # Real money - disbursed
         "active_contracts": len(active_contracts),
@@ -344,7 +347,6 @@ def get_financial_statistics(
     
     return {
         "meta": {
-            "granularity": granularity,
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
             "bucket_count": len(trend),

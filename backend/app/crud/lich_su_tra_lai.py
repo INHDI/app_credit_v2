@@ -220,14 +220,13 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
                 TienDaTra=0
             )
             db.add(db_lich_su)
-        if end_date < date_now and loai_hop_dong == "TG":
-            auto_create_lich_su(db)
-        
         # 8. Commit vào database
         db.commit()
-        
-
-        
+        # 9. Tự động tạo lịch sử trả lãi cho hôm nay nếu đến hạn
+        if end_date < date_now and loai_hop_dong == "TG":
+            auto_create_lich_su(db)
+            
+        # 10. Trả về kết quả
         return {
             "success": True,
             "message": f"Đã tạo {so_ky} bản ghi lịch sử trả lãi",
@@ -369,8 +368,7 @@ def auto_create_lich_su(db: Session) -> dict:
     """
     try:
         date_now = date.today()
-        # test với ngày 13/10/2025
-        # date_now = date(2025, 10, 23)
+        # date_now = date(2025, 10, 24)
         contracts_processed = 0
         records_created = 0
         records_updated = 0
@@ -443,7 +441,12 @@ def auto_create_lich_su(db: Session) -> dict:
         for contract in tra_gop_contracts:
             ma_hd = contract.MaHD
             # Chuẩn hóa trạng thái ngày cho TẤT CẢ bản ghi theo date_now
-            all_records_tg = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all().order_by(LichSuTraLai.Ngay.asc())
+            all_records_tg = (
+                db.query(LichSuTraLai)
+                .filter(LichSuTraLai.MaHD == ma_hd)
+                .order_by(LichSuTraLai.Ngay.asc())
+                .all()
+            )
             end_date = all_records_tg[-1].Ngay
             if end_date < date_now:
                 continue
@@ -551,7 +554,10 @@ def auto_create_lich_su(db: Session) -> dict:
 
             # Tạo bản ghi mới cho hôm nay với số tiền = (Gốc+Lãi)/Số lần + cộng dồn
             so_tien_moi_ky = (contract.SoTienVay + contract.LaiSuat) // contract.SoLanTra
-            so_tien_ky_moi = so_tien_moi_ky + tong_tien_chua_tra
+            if end_date < date_now:
+                so_tien_ky_moi = tong_tien_chua_tra
+            else:
+                so_tien_ky_moi = so_tien_moi_ky + tong_tien_chua_tra
             
             db_lich_su = LichSuTraLai(
                 MaHD=ma_hd,
@@ -603,13 +609,13 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
 
     if "TC" in ma_hd:
         # Tín Chấp: có thể chưa tồn tại bản ghi tương lai; tạo dần theo KyDong và phân bổ
-        contract_tc = db.query(TinChap).filter(TinChap.MaHD == ma_hd).first()
-        if not contract_tc:
+        contract = db.query(TinChap).filter(TinChap.MaHD == ma_hd).first()
+        if not contract:
             raise HTTPException(status_code=404, detail=f"Không tìm thấy hợp đồng {ma_hd}")
 
         current_date = db_lich_su.Ngay
-        ky_dong_days = contract_tc.KyDong or 1
-        daily_interest = contract_tc.LaiSuat or 0
+        ky_dong_days = contract.KyDong or 1
+        daily_interest = contract.LaiSuat or 0
         ky_so = 1  # Initialize period number
         is_first_period = True  # Track if this is the first period (selected period)
 
@@ -860,6 +866,7 @@ def tat_toan_hop_dong(db: Session, ma_hd: str, tien_lai: int = 0) -> dict:
 
         # Sau khi phân bổ lãi, luôn chuyển trạng thái hợp đồng thành DA_TAT_TOAN
         contract.TrangThai = TrangThaiThanhToan.DA_TAT_TOAN.value
+        
 
         db.commit()
         return {
@@ -873,6 +880,8 @@ def tat_toan_hop_dong(db: Session, ma_hd: str, tien_lai: int = 0) -> dict:
 
     # 3. Nếu tien_lai >= total_interest_due hoặc không truyền -> tất toán như cũ
     contract.TrangThai = TrangThaiThanhToan.DA_TAT_TOAN.value
+    if loai == "TC":
+        contract.SoTienTraGoc = contract.SoTienVay
 
     # 3. Cập nhật lịch sử liên quan
     lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all()
@@ -884,8 +893,8 @@ def tat_toan_hop_dong(db: Session, ma_hd: str, tien_lai: int = 0) -> dict:
                 ls.TienDaTra = ls.SoTien
             ls.TrangThaiThanhToan = TrangThaiThanhToan.DONG_DU.value
             updated += 1
-
     db.commit()
+    
 
     return {
         "success": True,

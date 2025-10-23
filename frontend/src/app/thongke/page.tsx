@@ -256,6 +256,53 @@ export default function ThongKe() {
     return `${year}-${month}-${day}`;
   };
 
+  // Calculate date range based on granularity
+  const calculateDateRange = (granularity: "daily" | "weekly" | "monthly") => {
+    const today = new Date();
+    
+    switch (granularity) {
+      case "daily":
+        // Từ đầu tháng đến cuối tháng hiện tại
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        return {
+          start: formatDateForAPI(firstDayOfMonth),
+          end: formatDateForAPI(lastDayOfMonth)
+        };
+        
+      case "weekly":
+        // Từ 4 tuần trước đến 4 tuần sau
+        const fourWeeksAgo = new Date(today);
+        fourWeeksAgo.setDate(today.getDate() - 28); // 4 tuần = 28 ngày
+        const fourWeeksLater = new Date(today);
+        fourWeeksLater.setDate(today.getDate() + 28);
+        return {
+          start: formatDateForAPI(fourWeeksAgo),
+          end: formatDateForAPI(fourWeeksLater)
+        };
+        
+      case "monthly":
+        // Từ 4 tháng trước đến 4 tháng sau
+        const fourMonthsAgo = new Date(today);
+        fourMonthsAgo.setMonth(today.getMonth() - 4);
+        const fourMonthsLater = new Date(today);
+        fourMonthsLater.setMonth(today.getMonth() + 4);
+        return {
+          start: formatDateForAPI(fourMonthsAgo),
+          end: formatDateForAPI(fourMonthsLater)
+        };
+        
+      default:
+        return {
+          start: formatDateForAPI(firstDayOfMonth),
+          end: formatDateForAPI(today)
+        };
+    }
+  };
+
+  // Calculate default date range for "daily" granularity
+  const defaultDateRange = calculateDateRange("daily");
+  
   const {
     state: { granularity, startDate, endDate },
     setGranularity,
@@ -268,10 +315,18 @@ export default function ThongKe() {
     error,
     refreshData,
   } = useThongKe({ 
-    granularity: "monthly", 
-    startDate: formatDateForAPI(firstDayOfMonth), 
-    endDate: formatDateForAPI(today) 
+    granularity: "daily", 
+    startDate: defaultDateRange.start, 
+    endDate: defaultDateRange.end 
   });
+
+  // Update date range when granularity changes
+  const handleGranularityChange = (newGranularity: "daily" | "weekly" | "monthly") => {
+    setGranularity(newGranularity);
+    const dateRange = calculateDateRange(newGranularity);
+    setStartDate(dateRange.start);
+    setEndDate(dateRange.end);
+  };
 
   // Subscribe to WebSocket events for real-time updates
   useDashboardEvents((data, message) => {
@@ -288,7 +343,6 @@ export default function ThongKe() {
     () => [
       { name: "Chi", color: "#ef4444", data: series?.data.map((r) => r.tong_tien_chi) ?? [] },
       { name: "Thu", color: "#10b981", data: series?.data.map((r) => r.tong_tien_thu) ?? [] },
-      { name: "Lãi", color: "#3b82f6", data: series?.data.map((r) => r.tong_tien_lai) ?? [] },
     ],
     [series]
   );
@@ -382,7 +436,7 @@ export default function ThongKe() {
                 <button
                   key={option}
                   type="button"
-                  onClick={() => setGranularity(option)}
+                  onClick={() => handleGranularityChange(option)}
                   className={cn(
                     "flex-1 rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition",
                     granularity === option ? "bg-blue-500 text-white shadow" : "text-slate-500 hover:text-blue-500"
@@ -444,7 +498,7 @@ export default function ThongKe() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">Xu hướng</p>
-              <CardTitle className="mt-1 text-2xl text-slate-800">Chi • Thu • Lãi theo thời gian</CardTitle>
+              <CardTitle className="mt-1 text-2xl text-slate-800">Chi • Thu theo thời gian</CardTitle>
             </div>
             <div className="hidden items-center gap-4 text-xs text-slate-500 md:flex">
               {chartSeries.map((s) => (

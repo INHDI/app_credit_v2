@@ -98,7 +98,9 @@ export default function SettleConfirmModal({
   );
 
   // Calculate settlement amounts
-  const principalAmount = contract?.SoTienVay || 0;
+  const principalAmount = contractType === 'tin_chap' 
+    ? (contract?.SoTienVay || 0) - (contract?.SoTienTraGoc || 0)  // Gốc còn lại cho tín chấp
+    : (contract?.SoTienVay || 0);  // Gốc đầy đủ cho trả góp
   const interestAmount = contract?.LaiConLai || unpaidTotal;
   
   const principalValue = principalAmount; // Sử dụng gốc từ hợp đồng
@@ -158,16 +160,21 @@ export default function SettleConfirmModal({
               <div className="font-medium text-slate-800">{tenKhachHang || '-'}</div>
             </div>
             
-            <div>
-              <div className="text-slate-600">Lãi còn lại</div>
-              <div className="font-semibold text-orange-700">
-                {formatCurrency(interestAmount)}
+            {contractType === 'tin_chap' && (
+              <div>
+                <div className="text-slate-600">Lãi còn lại</div>
+                <div className="font-semibold text-orange-700">
+                  {formatCurrency(interestAmount)}
+                </div>
               </div>
-            </div>
+            )}
             <div>
               <div className="text-slate-600">Tổng cần trả</div>
               <div className="font-bold text-red-700 text-lg">
-                {formatCurrency(principalAmount + interestAmount)}
+                {contractType === 'tra_gop' 
+                  ? formatCurrency(interestAmount)
+                  : formatCurrency(principalAmount + interestAmount)
+                }
               </div>
             </div>
           </div>
@@ -181,20 +188,22 @@ export default function SettleConfirmModal({
           </h4>
           
           <div className="space-y-4">
-            {/* Gốc cố định */}
-            <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Số tiền gốc (VNĐ)
-              </label>
-              <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-300">
-                <span className="font-medium text-slate-800">{formatCurrency(principalAmount)}</span>
+            {/* Gốc cố định - chỉ hiển thị cho tín chấp */}
+            {contractType === 'tin_chap' && (
+              <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Số tiền gốc (VNĐ)
+                </label>
+                <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-300">
+                  <span className="font-medium text-slate-800">{formatCurrency(principalAmount)}</span>
+                </div>
               </div>
-            </div>
+            )}
             
             {/* Lãi có thể nhập */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Số tiền lãi (VNĐ) - Nhập từ bàn phím
+                Số tiền lãi (VNĐ)
               </label>
               <input
                 type="text"
@@ -218,15 +227,17 @@ export default function SettleConfirmModal({
           </h4>
           
           <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">Gốc (cố định):</span>
-              <span className="text-sm font-medium text-slate-800">
-                {formatCurrency(principalValue)}
-              </span>
-            </div>
+            {contractType === 'tin_chap' && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-600">Gốc (cố định):</span>
+                <span className="text-sm font-medium text-slate-800">
+                  {formatCurrency(principalValue)}
+                </span>
+              </div>
+            )}
             
             <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">Lãi (nhập):</span>
+              <span className="text-sm text-slate-600">Lãi:</span>
               <span className="text-sm font-medium text-slate-800">
                 {formatCurrency(interestValue)}
               </span>
@@ -235,14 +246,25 @@ export default function SettleConfirmModal({
             <div className="flex justify-between items-center border-t pt-2">
               <span className="text-sm font-bold text-slate-800">Tổng cộng:</span>
               <span className="text-lg font-bold text-blue-700">
-                {formatCurrency(totalSettlementAmount)}
+                {contractType === 'tra_gop' 
+                  ? formatCurrency(interestValue)
+                  : formatCurrency(totalSettlementAmount)
+                }
               </span>
             </div>
             
-            {interestValue === 0 && (
+            {interestValue === 0 && contractType === 'tin_chap' && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
                 <p className="text-xs text-amber-700">
                   ℹ️ Chỉ trả gốc, không trả lãi
+                </p>
+              </div>
+            )}
+            
+            {interestValue === 0 && contractType === 'tra_gop' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+                <p className="text-xs text-amber-700">
+                  ℹ️ Không trả lãi
                 </p>
               </div>
             )}

@@ -37,8 +37,8 @@ export default function TinChapSummary() {
       const totalContracts = list.length;
       const activeContracts = list.filter((c) => c.TrangThai !== "Đã tất toán").length;
       const totalVay = list.reduce((s, c) => s + (c.SoTienVay || 0), 0);
-      const totalDaTra = list.reduce((s, c) => s + (c.LaiDaTra || 0), 0);
-      const totalConLai = list.reduce((s, c) => s + ((c.LaiConLai || 0) + (c.GocConLai || 0)), 0);
+      const totalDaTra = list.reduce((s, c) => s + (c.LaiDaTra || 0) + (c.SoTienTraGoc || 0), 0);
+      const totalConLai = list.reduce((s, c) => s + (c.SoTienVay || 0) + (c.LaiConLai || 0) - (c.SoTienTraGoc || 0), 0);
 
       const summaryCards = [
         {

@@ -163,9 +163,9 @@ export function useTinChap() {
   const summaryStats = useMemo(() => {
     const totalContracts = filteredContracts.length;
   const activeContracts = filteredContracts.filter(c => !((c.statusList || []) as ContractStatus[]).includes('da_thanh_toan')).length;
-    const totaltong_tien_vay = filteredContracts.reduce((sum, c) => sum + (c.tong_tien_vay || 0), 0);
-    const totaltien_da_tra = filteredContracts.reduce((sum, c) => sum + (c.total_interest_paid || 0), 0);
-    const totaltong_tien_con_lai = filteredContracts.reduce((sum, c) => sum + (c.unpaid_amount || 0), 0);
+    const totaltong_tien_vay = filteredContracts.reduce((sum, c) => sum + (c.SoTienVay || 0), 0);
+    const totaltien_da_tra = filteredContracts.reduce((sum, c) => sum + (c.LaiDaTra || 0) + (c.SoTienTraGoc || 0), 0);
+    const totaltong_tien_con_lai = filteredContracts.reduce((sum, c) => sum + (c.SoTienVay || 0) + (c.LaiConLai || 0) - (c.SoTienTraGoc || 0), 0);
     return { totalContracts, activeContracts, totaltong_tien_vay, totaltien_da_tra, totaltong_tien_con_lai };
   }, [filteredContracts]);
 

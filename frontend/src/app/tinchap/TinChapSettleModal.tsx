@@ -26,6 +26,7 @@ export default function TinChapSettleModal({
       contractType="tin_chap"
       contract={{
         SoTienVay: contract?.SoTienVay,
+        SoTienTraGoc: contract?.SoTienTraGoc,
         LaiConLai: contract?.LaiConLai,
         TongTienVayVaLai: contract?.TongTienVayVaLai
       }}
