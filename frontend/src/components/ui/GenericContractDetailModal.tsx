@@ -171,7 +171,7 @@ export default function GenericContractDetailModal({
                 <div className="space-y-2 sm:col-span-2 lg:col-span-1">
                   <label className="text-xs sm:text-sm font-medium text-slate-600">Lãi suất</label>
                   <div className="flex items-center gap-2 p-2 sm:p-3 bg-white rounded-lg border border-amber-100">
-                    <span className="font-medium text-slate-800 text-sm sm:text-base truncate">{formatCurrency(contract.lai_suat)} / {contract.kieu_lai_suat}</span>
+                    <span className="font-medium text-slate-800 text-sm sm:text-base truncate">{formatCurrency(contract.lai_suat)}</span>
                   </div>
                 </div>
                 {config.contractType === 'tra_gop' && (
@@ -180,14 +180,7 @@ export default function GenericContractDetailModal({
                       <label className="text-xs sm:text-sm font-medium text-slate-600">Số kỳ trả</label>
                       <div className="flex items-center gap-2 p-2 sm:p-3 bg-white rounded-lg border border-amber-100">
                         <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-slate-500 flex-shrink-0" />
-                        <span className="font-medium text-slate-800 text-sm sm:text-base truncate">{(contract as any).so_ky_tra || 'N/A'} kỳ</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs sm:text-sm font-medium text-slate-600">Số tiền/kỳ</label>
-                      <div className="flex items-center gap-2 p-2 sm:p-3 bg-white rounded-lg border border-amber-100">
-                        <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-slate-500 flex-shrink-0" />
-                        <span className="font-medium text-slate-800 text-sm sm:text-base truncate">{formatCurrency((contract as any).so_tien_ky || 0)}</span>
+                        <span className="font-medium text-slate-800 text-sm sm:text-base truncate">{contract.so_ky_tra}</span>
                       </div>
                     </div>
                   </>

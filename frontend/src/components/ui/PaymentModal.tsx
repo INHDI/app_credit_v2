@@ -151,7 +151,6 @@ export default function PaymentModal({
               </span>
               <div className="flex-1">
                 <h4 className="font-semibold text-slate-800">Thanh toán một phần</h4>
-                <p className="text-sm text-slate-600">Thanh toán một số tiền nhỏ hơn tổng số tiền cần trả</p>
               </div>
               <CreditCard className="h-5 w-5 text-blue-600" />
             </div>

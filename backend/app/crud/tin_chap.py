@@ -347,16 +347,26 @@ def tra_goc_tin_chap(db: Session, ma_hd: str, so_tien_tra_goc: int) -> bool:
         if not db_tin_chap:
             return False
         db_tin_chap.SoTienTraGoc += so_tien_tra_goc
+        db_lich_su_tra_lai_tin_chap = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all()
         if db_tin_chap.SoTienTraGoc > db_tin_chap.SoTienVay:
-            # db_tin_chap.TrangThai = TrangThaiThanhToan.DA_TAT_TOAN.value
-            db_lich_su_tra_lai_tin_chap = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all()
             # Nếu tổng TienDaTra > SoTien thì thay đổi trạng thái thành DA_TAT_TOAN
             if sum(ls.TienDaTra for ls in db_lich_su_tra_lai_tin_chap) > db_tin_chap.SoTienVay:
                 db_tin_chap.TrangThai = TrangThaiThanhToan.DA_TAT_TOAN.value
             else:
                 db_tin_chap.TrangThai = TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
+        db_lich_su_tra_lai_tin_chap_today = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.Ngay == date.today()).first()
+        if db_lich_su_tra_lai_tin_chap_today:
+            if "Trả gốc" not in db_lich_su_tra_lai_tin_chap_today.NoiDung:
+                db_lich_su_tra_lai_tin_chap_today.NoiDung = f"Trả gốc: {so_tien_tra_goc:,} VNĐ| {db_lich_su_tra_lai_tin_chap_today.NoiDung}"
+            else:
+                noi_dung_ban_dau = db_lich_su_tra_lai_tin_chap_today.NoiDung.split("|")
+                noi_dung_khong_doi = noi_dung_ban_dau[1:]
+                noi_dung_tra_goc_moi = f"{noi_dung_ban_dau[0]} + {so_tien_tra_goc:,} VNĐ"
+                db_lich_su_tra_lai_tin_chap_today.NoiDung = f"{noi_dung_tra_goc_moi} | {'|'.join(noi_dung_khong_doi)}"
         db.commit()
         db.refresh(db_tin_chap)
+        db.refresh(db_lich_su_tra_lai_tin_chap_today)
+
         return True
     except Exception as e:
         db.rollback()

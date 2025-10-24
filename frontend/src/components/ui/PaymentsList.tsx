@@ -6,6 +6,18 @@ import { CheckCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatters";
 import { getDuePriority, getDueStatusClass, getPayStatusClass } from "@/utils/statusHelpers";
 
+// Function to format payment content with proper line breaks
+const formatPaymentContent = (content: string) => {
+  if (!content) return null;
+  
+  // Split by "|" and clean up each part
+  const parts = content.split('|').map(part => part.trim()).filter(part => part.length > 0);
+  
+  return parts.map((part, index) => (
+    <p key={index} className="truncate">{part}</p>
+  ));
+};
+
 interface PaymentRecord {
   Stt?: number | string;
   id?: number | string;
@@ -66,7 +78,7 @@ export default function PaymentsList({ items, onPayClick, disablePayWhen }: Paym
         const remain = Math.max(0, Number(soTien) - Number(daTra));
         const disablePay = disablePayWhen ? disablePayWhen(payment) : (payment.TrangThaiNgayThanhToan === 'Quá hạn' || payment.TrangThaiNgayThanhToan === 'Quá kỳ đóng lãi');
 
-        const id = (payment as any).Stt ?? payment.id ?? idx;
+        const id = idx + 1; // STT bắt đầu từ 1
         const dateStr = new Date(payment.Ngay || (payment as any).ngay_tra_lai).toLocaleDateString('vi-VN');
         
         // Check if payment date is today for button visibility
@@ -83,7 +95,9 @@ export default function PaymentsList({ items, onPayClick, disablePayWhen }: Paym
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-800 text-sm sm:text-base truncate">{dateStr}</p>
-                  <p className="text-xs sm:text-sm text-slate-600 truncate">{payment.NoiDung || payment.ghi_chu || ''}</p>
+                  <div className="text-xs sm:text-sm text-slate-600 space-y-1">
+                    {formatPaymentContent(payment.NoiDung || payment.ghi_chu || '')}
+                  </div>
                   <p className="text-xs sm:text-sm text-slate-500 truncate">Số tiền: {formatCurrency(Number(soTien))} | Đã trả: {formatCurrency(Number(daTra))}</p>
                 </div>
               </div>
