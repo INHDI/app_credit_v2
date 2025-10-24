@@ -758,12 +758,13 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
                 is_first_period = False
             else:
                 # Các kỳ sau: cộng dồn nội dung thanh toán
+                noi_dung_lai = f"Lãi đã được trả vào ngày {date.today().isoformat()} |Số tiền thanh toán: {nop_vao_ky:,} VNĐ"
                 if "Số tiền thanh toán" in period.NoiDung:
                     # Đã có ghi chú thanh toán trước đó, cộng dồn
                     period.NoiDung += f" + {nop_vao_ky:,} VNĐ"
                 else:
                     # Chưa có ghi chú thanh toán, tạo mới
-                    period.NoiDung += f" |Số tiền thanh toán: {nop_vao_ky:,} VNĐ"
+                    period.NoiDung += f" |{noi_dung_lai}"
 
     # Kiểm tra tất toán: nếu tổng đã trả >= tổng cần trả
     if "TG" in ma_hd:
