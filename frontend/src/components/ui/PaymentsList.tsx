@@ -78,7 +78,8 @@ export default function PaymentsList({ items, onPayClick, disablePayWhen }: Paym
         const remain = Math.max(0, Number(soTien) - Number(daTra));
         const disablePay = disablePayWhen ? disablePayWhen(payment) : (payment.TrangThaiNgayThanhToan === 'Quá hạn' || payment.TrangThaiNgayThanhToan === 'Quá kỳ đóng lãi');
 
-        const id = idx + 1; // STT bắt đầu từ 1
+        const displayId = idx + 1; // STT hiển thị bắt đầu từ 1
+        const id = (payment as any).Stt ?? payment.id ?? idx; // ID thực để gửi data
         const dateStr = new Date(payment.Ngay || (payment as any).ngay_tra_lai).toLocaleDateString('vi-VN');
         
         // Check if payment date is today for button visibility
@@ -91,7 +92,7 @@ export default function PaymentsList({ items, onPayClick, disablePayWhen }: Paym
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs sm:text-sm font-semibold text-blue-600">{String(id)}</span>
+                  <span className="text-xs sm:text-sm font-semibold text-blue-600">{String(displayId)}</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-800 text-sm sm:text-base truncate">{dateStr}</p>

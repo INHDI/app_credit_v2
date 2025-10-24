@@ -14,6 +14,7 @@ export interface ContractDetailData {
   daily_interest?: number;
   status: string;
   statusColor: string;
+  so_ky_tra?: number;
 }
 
 export interface PaymentHistoryItem {
