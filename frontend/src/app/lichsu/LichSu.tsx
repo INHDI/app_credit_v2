@@ -21,12 +21,13 @@ export default function LichSu() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Filter states - initialize with current month
+  // Filter states - initialize with current month (1st to last day of month)
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   
   const [fromDate, setFromDate] = useState(formatDateForInput(firstDayOfMonth));
-  const [toDate, setToDate] = useState(formatDateForInput(today));
+  const [toDate, setToDate] = useState(formatDateForInput(lastDayOfMonth));
   
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,7 +62,7 @@ export default function LichSu() {
   useEffect(() => {
     // Load with current month filter
     const tuNgay = formatDateForAPI(firstDayOfMonth);
-    const denNgay = formatDateForAPI(today);
+    const denNgay = formatDateForAPI(lastDayOfMonth);
     loadLichSuData(tuNgay, denNgay);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -100,6 +101,17 @@ export default function LichSu() {
     // Reset to page 1 when searching
     setCurrentPage(1);
     loadLichSuData(tuNgay, denNgay);
+  };
+
+  // Handle reset to default date range (current month)
+  const handleReset = () => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
+    setFromDate(formatDateForInput(firstDayOfMonth));
+    setToDate(formatDateForInput(lastDayOfMonth));
+    setCurrentPage(1);
   };
 
   // Filter by search term
@@ -199,6 +211,7 @@ export default function LichSu() {
         onFromDateChange={setFromDate}
         onToDateChange={setToDate}
         onSearch={handleSearch}
+        onReset={handleReset}
       />
 
       {/* Error message if any during search */}
@@ -208,14 +221,16 @@ export default function LichSu() {
         </div>
       )}
 
-      {/* Statistics Table */}
-      {lichSuData && (
-        <StatisticsTable statistics={lichSuData.statistics} />
-      )}
+      
 
       {/* Statistics Chart */}
       {lichSuData && (
         <StatisticsChart statistics={lichSuData.statistics} />
+      )}
+
+      {/* Statistics Table */}
+      {lichSuData && (
+        <StatisticsTable statistics={lichSuData.statistics} />
       )}
 
       {/* Search Filter */}

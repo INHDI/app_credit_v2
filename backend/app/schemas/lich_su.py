@@ -11,6 +11,7 @@ class LichSuStatisticsByDate(BaseModel):
     ngay: date = Field(..., description="Ngày")
     so_nguoi_da_tra: int = Field(..., description="Số người đã trả")
     so_nguoi_chua_tra: int = Field(..., description="Số người chưa trả")
+    hanh_dong_stats: dict = Field(..., description="Thống kê theo hành động")
 
 
 class LichSuDetail(BaseModel):

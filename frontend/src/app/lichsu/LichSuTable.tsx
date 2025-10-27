@@ -8,29 +8,48 @@ interface LichSuTableProps {
   startIndex: number;
 }
 
-// Get status badge class based on status text
-const getStatusClass = (status: string): string => {
-  const lowerStatus = status.toLowerCase();
-  
-  if (lowerStatus.includes('đã thanh toán') || lowerStatus.includes('hoàn thành')) {
+// Get status badge class based on action type
+const getStatusClass = (action: string): string => {
+  if (action.includes('Tạo hợp đồng')) {
+    return 'bg-blue-100 text-blue-700 border-blue-200';
+  }
+  if (action.includes('Thanh toán lãi')) {
     return 'bg-green-100 text-green-700 border-green-200';
   }
-  if (lowerStatus.includes('chưa thanh toán') || lowerStatus.includes('chưa trả')) {
-    return 'bg-red-100 text-red-700 border-red-200';
+  if (action.includes('Trả gốc')) {
+    return 'bg-emerald-100 text-emerald-700 border-emerald-200';
   }
-  if (lowerStatus.includes('một phần') || lowerStatus.includes('partial')) {
-    return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+  if (action.includes('Tất toán')) {
+    return 'bg-purple-100 text-purple-700 border-purple-200';
   }
   
   return 'bg-slate-100 text-slate-700 border-slate-200';
 };
 
+// Get amount color class based on action type
+const getAmountClass = (action: string): string => {
+  if (action.includes('Tạo hợp đồng')) {
+    return 'text-red-600'; // Chi tiền (disbursed)
+  }
+  if (action.includes('Thanh toán lãi')) {
+    return 'text-green-600'; // Thu lãi
+  }
+  if (action.includes('Trả gốc')) {
+    return 'text-emerald-600'; // Thu gốc
+  }
+  if (action.includes('Tất toán')) {
+    return 'text-purple-600'; // Thu tất toán
+  }
+  
+  return 'text-slate-800';
+};
+
 // Get contract type badge class
 const getContractTypeClass = (type: string): string => {
-  if (type === 'Tín chấp') {
+  if (type === 'TC') {
     return 'bg-blue-100 text-blue-700 border-blue-200';
   }
-  if (type === 'Trả góp') {
+  if (type === 'TG') {
     return 'bg-orange-100 text-orange-700 border-orange-200';
   }
   return 'bg-slate-100 text-slate-700 border-slate-200';
@@ -88,7 +107,7 @@ export default function LichSuTable({ details, startIndex }: LichSuTableProps) {
                       {item.ho_ten}
                     </td>
                     <td className="text-right p-4 align-middle tabular-nums">
-                      <div className="font-semibold text-slate-800 text-base">
+                      <div className={`font-semibold text-base ${getAmountClass(item.trang_thai)}`}>
                         {formatCurrency(item.so_tien_thanh_toan)}
                       </div>
                       <div className="text-xs text-slate-500">VNĐ</div>
@@ -141,7 +160,7 @@ export default function LichSuTable({ details, startIndex }: LichSuTableProps) {
                 <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
                   <div>
                     <div className="text-xs text-slate-500">Số tiền thanh toán</div>
-                    <div className="font-semibold text-slate-800 text-base">
+                    <div className={`font-semibold text-base ${getAmountClass(item.trang_thai)}`}>
                       {formatCurrency(item.so_tien_thanh_toan)}
                     </div>
                     <div className="text-xs text-slate-500">VNĐ</div>

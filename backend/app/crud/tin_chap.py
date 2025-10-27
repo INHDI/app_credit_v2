@@ -11,6 +11,7 @@ from app.models.lich_su_tra_lai import LichSuTraLai
 from app.schemas.tin_chap import TinChapCreate, TinChapUpdate, TinChapResponse
 from app.schemas.lich_su_tra_lai import LichSuTraLai as LichSuTraLaiSchema
 from app.core.enums import TrangThaiThanhToan
+from app.utils.lich_su import create_lich_su, delete_lich_su
 
 
 def _calculate_payment_info(db: Session, ma_hd: str) -> dict:
@@ -227,6 +228,14 @@ def create_tin_chap(db: Session, tin_chap: TinChapCreate, ma_hd: str) -> TinChap
         db.add(db_tin_chap)
         db.commit()
         db.refresh(db_tin_chap)
+
+        create_lich_su(db, 
+            ma_hd=ma_hd, 
+            ho_ten=tin_chap.HoTen, 
+            ngay= date.today(), 
+            so_tien=tin_chap.SoTienVay, 
+            hanh_dong="Tạo hợp đồng tín chấp", 
+            loai_hop_dong="TC")
         
         return db_tin_chap
         
@@ -262,6 +271,13 @@ def update_tin_chap(db: Session, ma_hd: str, tin_chap_update: TinChapUpdate) -> 
             db.commit()
             db.refresh(db_tin_chap)
         
+        # create_lich_su(db, 
+        #     ma_hd=ma_hd, 
+        #     ho_ten=db_tin_chap.HoTen, 
+        #     ngay= date.today(), 
+        #     so_tien=db_tin_chap.SoTienVay, 
+        #     hanh_dong="Cập nhật hợp đồng tín chấp", 
+        #     loai_hop_dong="TC")
         return db_tin_chap
         
     except Exception as e:
@@ -286,6 +302,7 @@ def delete_tin_chap(db: Session, ma_hd: str) -> bool:
         if not db_tin_chap:
             return False
         
+        delete_lich_su(db, ma_hd=ma_hd)
         db.delete(db_tin_chap)
         db.commit()
         
@@ -367,6 +384,13 @@ def tra_goc_tin_chap(db: Session, ma_hd: str, so_tien_tra_goc: int) -> bool:
         db.refresh(db_tin_chap)
         db.refresh(db_lich_su_tra_lai_tin_chap_today)
 
+        create_lich_su(db, 
+            ma_hd=ma_hd, 
+            ho_ten=db_tin_chap.HoTen, 
+            ngay= date.today(), 
+            so_tien=so_tien_tra_goc, 
+            hanh_dong="Trả gốc hợp đồng tín chấp", 
+            loai_hop_dong="TC")
         return True
     except Exception as e:
         db.rollback()

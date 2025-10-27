@@ -13,6 +13,7 @@ from app.models.tin_chap import TinChap
 from app.models.tra_gop import TraGop
 from app.schemas.lich_su_tra_lai import LichSuTraLaiCreate, LichSuTraLaiUpdate
 
+from app.utils.lich_su import create_lich_su as create_lich_su_utils, delete_lich_su as delete_lich_su_utils
 
 def get_lich_su(db: Session, stt: int) -> Optional[LichSuTraLai]:
     """
@@ -285,6 +286,7 @@ def delete_lich_su(db: Session, stt: int) -> bool:
     if not db_lich_su:
         return False
     
+    delete_lich_su_utils(db, ma_hd=db_lich_su.MaHD)
     db.delete(db_lich_su)
     db.commit()
     
@@ -335,6 +337,8 @@ def delete_lich_sus_by_contract(db: Session, ma_hd: str) -> int:
         
         if not lich_sus:
             return 0
+        
+        delete_lich_su_utils(db, ma_hd=ma_hd)
         
         # Đếm số bản ghi trước khi xóa
         so_ban_ghi = len(lich_sus)
@@ -709,8 +713,11 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
             else:
                 # Không đủ để đóng đủ kỳ hiện tại thì dừng
                 break
-    else:
+    elif "TG" in ma_hd:
         # Trả Góp: đã có lịch thanh toán đầy đủ → phân bổ trên các bản ghi tương lai sẵn có
+        contract = db.query(TraGop).filter(TraGop.MaHD == ma_hd).first()
+        if not contract:
+            raise HTTPException(status_code=404, detail=f"Không tìm thấy hợp đồng {ma_hd}")
         
         # Cộng dồn nội dung cho bản ghi được chọn (STT) - Trả Góp
         if "Số tiền thanh toán" in db_lich_su.NoiDung:
@@ -768,16 +775,14 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
 
     # Kiểm tra tất toán: nếu tổng đã trả >= tổng cần trả
     if "TG" in ma_hd:
-        contract = db.query(TraGop).filter(TraGop.MaHD == ma_hd).first()
-        if contract:
-            # Trả Góp: tổng số tiền của tất cả các kỳ trong lịch sử
-            tong_can_tra = contract.SoTienVay + contract.LaiSuat
-            
-            # Tính tổng đã trả từ lịch sử
-            tong_da_tra = sum(ls.TienDaTra for ls in future_periods)
-            
-            if tong_da_tra >= tong_can_tra:
-                contract.TrangThai = TrangThaiThanhToan.DA_TAT_TOAN.value
+        # Trả Góp: tổng số tiền của tất cả các kỳ trong lịch sử
+        tong_can_tra = contract.SoTienVay + contract.LaiSuat
+        
+        # Tính tổng đã trả từ lịch sử
+        tong_da_tra = sum(ls.TienDaTra for ls in future_periods)
+        
+        if tong_da_tra >= tong_can_tra:
+            contract.TrangThai = TrangThaiThanhToan.DA_TAT_TOAN.value
     # Cập nhật trạng thái hợp đồng dựa trên tổng còn nợ trong lịch sử (nếu chưa tất toán)
     if contract and contract.TrangThai != TrangThaiThanhToan.DA_TAT_TOAN.value and "TG" in ma_hd:
         any_unpaid = db.query(LichSuTraLai).filter(
@@ -790,6 +795,26 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
         )
 
     db.commit()
+
+    # Tạo bản ghi lịch sử cho việc thanh toán (sau khi commit thành công)
+    if "TC" in ma_hd:
+        create_lich_su_utils(db, 
+            ma_hd=ma_hd, 
+            ho_ten=contract.HoTen, 
+            ngay=date.today(), 
+            so_tien=so_tien, 
+            hanh_dong="Thanh toán lãi hợp đồng tín chấp", 
+            loai_hop_dong="TC")
+    elif "TG" in ma_hd:
+        create_lich_su_utils(db, 
+            ma_hd=ma_hd, 
+            ho_ten=contract.HoTen, 
+            ngay=date.today(), 
+            so_tien=so_tien, 
+            hanh_dong="Thanh toán lãi hợp đồng trả góp", 
+            loai_hop_dong="TG")
+    else:
+        raise HTTPException(status_code=400, detail=f"Mã hợp đồng không hợp lệ: {ma_hd}")
 
     return {
         "success": True,
@@ -887,6 +912,7 @@ def tat_toan_hop_dong(db: Session, ma_hd: str, tien_lai: int = 0) -> dict:
 
         # 4. Cập nhật trạng thái hợp đồng
         contract.TrangThai = TrangThaiThanhToan.DA_TAT_TOAN.value
+        tien_con_lai = 0  # Initialize for TG case
         if loai == "TC":
             tien_con_lai = contract.SoTienVay - contract.SoTienTraGoc
             contract.SoTienTraGoc = tien_con_lai
@@ -905,6 +931,27 @@ def tat_toan_hop_dong(db: Session, ma_hd: str, tien_lai: int = 0) -> dict:
             db_lich_su_tra_lai_today.NoiDung = noi_dung_tat_toan
 
         db.commit()
+
+        # Tạo bản ghi lịch sử cho việc tất toán hợp đồng
+        if loai == "TC":
+            # Tín chấp: lãi + gốc còn lại
+            so_tien_tat_toan = tien_lai + tien_con_lai
+            create_lich_su_utils(db, 
+                ma_hd=ma_hd, 
+                ho_ten=contract.HoTen, 
+                ngay=date.today(), 
+                so_tien=so_tien_tat_toan, 
+                hanh_dong="Tất toán hợp đồng tín chấp", 
+                loai_hop_dong="TC")
+        elif loai == "TG":
+            # Trả góp: chỉ lãi
+            create_lich_su_utils(db, 
+                ma_hd=ma_hd, 
+                ho_ten=contract.HoTen, 
+                ngay=date.today(), 
+                so_tien=tien_lai, 
+                hanh_dong="Tất toán hợp đồng trả góp", 
+                loai_hop_dong="TG")
 
         return {
             "success": True,

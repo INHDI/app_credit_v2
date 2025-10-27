@@ -12,7 +12,7 @@ export default function SearchFilter({
   onSearchChange,
 }: SearchFilterProps) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-1 md:p-2">
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />

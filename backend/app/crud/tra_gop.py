@@ -11,6 +11,7 @@ from app.models.tra_gop import TraGop
 from app.models.lich_su_tra_lai import LichSuTraLai
 from app.schemas.tra_gop import TraGopCreate, TraGopUpdate, TraGopResponse
 from app.schemas.lich_su_tra_lai import LichSuTraLai as LichSuTraLaiSchema
+from app.utils.lich_su import create_lich_su, delete_lich_su
 
 
 def get_tra_gop(db: Session, ma_hd: str) -> Optional[TraGop]:
@@ -167,6 +168,13 @@ def create_tra_gop(db: Session, tra_gop: TraGopCreate, ma_hd: str) -> TraGop:
     db.commit()
     db.refresh(db_tra_gop)
     
+    create_lich_su(db, 
+        ma_hd=ma_hd, 
+        ho_ten=tra_gop.HoTen, 
+        ngay=date.today(), 
+        so_tien=tra_gop.SoTienVay, 
+        hanh_dong="Tạo hợp đồng trả góp", 
+        loai_hop_dong="TG")
     return db_tra_gop
 
 
@@ -183,7 +191,14 @@ def update_tra_gop(db: Session, ma_hd: str, tra_gop_update: TraGopUpdate) -> Opt
         Updated TraGop object or None if not found
     """
     db_tra_gop = get_tra_gop(db, ma_hd)
-    
+
+    create_lich_su(db, 
+        ma_hd=ma_hd, 
+        ho_ten=db_tra_gop.HoTen, 
+        ngay=date.today(), 
+        so_tien=db_tra_gop.SoTienVay, 
+        hanh_dong="Cập nhật hợp đồng trả góp", 
+        loai_hop_dong="TG")
     if not db_tra_gop:
         return None
     
@@ -212,7 +227,7 @@ def delete_tra_gop(db: Session, ma_hd: str) -> bool:
     
     if not db_tra_gop:
         return False
-    
+    delete_lich_su(db, ma_hd=ma_hd)
     db.delete(db_tra_gop)
     db.commit()
     

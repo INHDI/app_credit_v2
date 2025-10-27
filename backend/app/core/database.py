@@ -54,12 +54,12 @@ def init_db():
     Initialize database - create all tables
     """
     # Import all models to ensure they are registered with Base
-    from app.models import TinChap, TraGop, LichSuTraLai
+    from app.models import TinChap, TraGop, LichSuTraLai, LichSu
     
     # Create all tables
     Base.metadata.create_all(bind=engine)
     print(f"✅ Database initialized at: {POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}")
-    print(f"✅ Tables created: tin_chap, tra_gop, lich_su_tra_lai")
+    print(f"✅ Tables created: tin_chap, tra_gop, lich_su_tra_lai, lich_su")
 
 
 # Function to drop all tables (use with caution!)

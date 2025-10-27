@@ -26,7 +26,7 @@ export default function StatisticsChart({ statistics }: StatisticsChartProps) {
           Biểu đồ trạng thái tín dụng
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-6">
+      <CardContent >
         {statistics.length === 0 ? (
           <div className="flex items-center justify-center h-64 text-slate-500">
             Không có dữ liệu thống kê
