@@ -34,7 +34,9 @@ export default function LichSu() {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [statisticsCurrentPage, setStatisticsCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const statisticsItemsPerPage = 10;
 
   // Fetch data function
   const loadLichSuData = useCallback(async (tuNgay?: string, denNgay?: string) => {
@@ -100,6 +102,7 @@ export default function LichSu() {
     
     // Reset to page 1 when searching
     setCurrentPage(1);
+    setStatisticsCurrentPage(1);
     loadLichSuData(tuNgay, denNgay);
   };
 
@@ -112,6 +115,7 @@ export default function LichSu() {
     setFromDate(formatDateForInput(firstDayOfMonth));
     setToDate(formatDateForInput(lastDayOfMonth));
     setCurrentPage(1);
+    setStatisticsCurrentPage(1);
   };
 
   // Filter by search term
@@ -230,7 +234,12 @@ export default function LichSu() {
 
       {/* Statistics Table */}
       {lichSuData && (
-        <StatisticsTable statistics={lichSuData.statistics} />
+        <StatisticsTable 
+          statistics={lichSuData.statistics}
+          currentPage={statisticsCurrentPage}
+          setCurrentPage={setStatisticsCurrentPage}
+          itemsPerPage={statisticsItemsPerPage}
+        />
       )}
 
       {/* Search Filter */}

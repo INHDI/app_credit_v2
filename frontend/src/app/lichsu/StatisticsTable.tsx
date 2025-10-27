@@ -2,12 +2,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 import { LichSuStatisticsByDate } from "@/services/lichsuApi";
 import { formatDateDisplay } from "@/lib/utils";
+import StatisticsPagination from "./StatisticsPagination";
 
 interface StatisticsTableProps {
   statistics: LichSuStatisticsByDate[];
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  itemsPerPage: number;
 }
 
-export default function StatisticsTable({ statistics }: StatisticsTableProps) {
+export default function StatisticsTable({ 
+  statistics, 
+  currentPage, 
+  setCurrentPage, 
+  itemsPerPage 
+}: StatisticsTableProps) {
+  // Calculate pagination
+  const totalPages = Math.ceil(statistics.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedStatistics = statistics.slice(startIndex, endIndex);
+
   return (
     <Card className="rounded-2xl border-0 shadow-xl overflow-hidden">
       <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
@@ -29,20 +44,20 @@ export default function StatisticsTable({ statistics }: StatisticsTableProps) {
               </tr>
             </thead>
             <tbody>
-              {statistics.length === 0 ? (
+              {paginatedStatistics.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-center p-8 text-slate-500">
                     Không có dữ liệu thống kê
                   </td>
                 </tr>
               ) : (
-                statistics.map((item, index) => (
+                paginatedStatistics.map((item, index) => (
                   <tr
-                    key={`stat-${index}`}
+                    key={`stat-${startIndex + index}`}
                     className="border-b border-slate-100 even:bg-slate-50/60 hover:bg-blue-50/50 transition-colors"
                   >
                     <td className="text-center p-4 align-middle font-medium text-slate-600">
-                      {index + 1}
+                      {startIndex + index + 1}
                     </td>
                     <td className="p-4 align-middle text-slate-700 font-medium">
                       {formatDateDisplay(item.ngay)}
@@ -66,19 +81,19 @@ export default function StatisticsTable({ statistics }: StatisticsTableProps) {
 
         {/* Mobile Cards */}
         <div className="space-y-3 md:hidden p-4">
-          {statistics.length === 0 ? (
+          {paginatedStatistics.length === 0 ? (
             <div className="text-center p-8 text-slate-500">
               Không có dữ liệu thống kê
             </div>
           ) : (
-            statistics.map((item, index) => (
+            paginatedStatistics.map((item, index) => (
               <div
-                key={`stat-mobile-${index}`}
+                key={`stat-mobile-${startIndex + index}`}
                 className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-500">#{index + 1}</span>
+                    <span className="text-xs font-semibold text-slate-500">#{startIndex + index + 1}</span>
                     <span className="font-semibold text-slate-800">
                       {formatDateDisplay(item.ngay)}
                     </span>
@@ -104,6 +119,18 @@ export default function StatisticsTable({ statistics }: StatisticsTableProps) {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {statistics.length > itemsPerPage && (
+          <StatisticsPagination
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            itemsPerPage={itemsPerPage}
+            countAllItems={statistics.length}
+          />
+        )}
       </CardContent>
     </Card>
   );
