@@ -16,7 +16,7 @@ from app.schemas.dashboard import (
     TiLeLaiThu,
     TiLeLoiNhuan
 )
-from app.core.enums import TimePeriod, TrangThaiThanhToan
+from app.core.enums import TimePeriod, TrangThaiNgayThanhToan, TrangThaiThanhToan
 
 
 def _get_date_filter(time_period: str):
@@ -127,16 +127,25 @@ def get_dashboard(db: Session, time_period: str = "all") -> DashboardResponse:
     tong_tien_can_thu = tc_tien_no_can_tra + tg_tien_no_can_tra
     
     # Count contracts with debt (no_phai_thu)
-    no_phai_thu_count = 0
-    for tc in tin_chaps:
-        lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == tc.MaHD).all()
-        if any(ls.SoTien > ls.TienDaTra for ls in lich_sus):
-            no_phai_thu_count += 1
+    # no_phai_thu_count = 0
+    # for tc in tin_chaps:
+    #     lich_sus = db.query(LichSuTraLai).filter(
+    #         LichSuTraLai.MaHD == tc.MaHD).all()
+    #     if any(ls.SoTien > ls.TienDaTra for ls in lich_sus):
+    #         no_phai_thu_count += 1
     
-    for tg in tra_gops:
-        lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == tg.MaHD).all()
-        if any(ls.SoTien > ls.TienDaTra for ls in lich_sus):
-            no_phai_thu_count += 1
+    # for tg in tra_gops:
+    #     lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == tg.MaHD).all()
+    #     if any(ls.SoTien > ls.TienDaTra for ls in lich_sus):
+    #         no_phai_thu_count += 1
+    no_phai_thu_count = db.query(LichSuTraLai).filter(
+        or_(
+            LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.CHUA_THANH_TOAN.value,
+            LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
+        ),
+        LichSuTraLai.TrangThaiNgayThanhToan == TrangThaiNgayThanhToan.DEN_HAN.value
+    ).distinct().count()
+    print(no_phai_thu_count)
     
     # Calculate ti_le_lai_thu (% đã thu / chưa thu)
     tong_phai_thu = tong_tien_da_thu + tong_tien_can_thu

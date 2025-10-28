@@ -108,7 +108,7 @@ class WebSocketService {
     }
 
     this.eventListeners.get(event)!.add(listener as WebSocketEventListener<unknown>);
-    console.log('[WebSocket] Subscribed to:', event);
+    // console.log('[WebSocket] Subscribed to:', event);
 
     // Return unsubscribe function
     return () => this.off(event, listener);
@@ -121,7 +121,6 @@ class WebSocketService {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
       listeners.delete(listener as WebSocketEventListener<unknown>);
-      console.log('[WebSocket] Unsubscribed from:', event);
 
       if (listeners.size === 0) {
         this.eventListeners.delete(event);
@@ -190,7 +189,6 @@ class WebSocketService {
       // Handle special events
       if (message.type === WebSocketEventType.PONG) {
         // Pong received, connection is alive
-        console.log('[WebSocket] 🏓 Pong received');
       }
     } catch (error) {
       console.error('[WebSocket] Message parse error:', error);
@@ -209,7 +207,6 @@ class WebSocketService {
    * Handle WebSocket close event
    */
   private handleClose(event: CloseEvent): void {
-    console.log('[WebSocket] 🔌 Connection closed:', event.code, event.reason);
     this.clearTimers();
     this.setStatus(WebSocketStatus.DISCONNECTED);
     this.scheduleReconnect();
@@ -248,7 +245,6 @@ class WebSocketService {
           type: WebSocketEventType.PING,
           data: { timestamp: new Date().toISOString() }
         });
-        console.log('[WebSocket] 🏓 Ping sent');
       }
     }, this.pingInterval);
   }
@@ -287,7 +283,6 @@ class WebSocketService {
   private setStatus(status: WebSocketStatus): void {
     if (this.status !== status) {
       this.status = status;
-      console.log('[WebSocket] Status changed to:', status);
 
       this.statusListeners.forEach(listener => {
         try {

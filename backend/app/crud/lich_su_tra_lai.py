@@ -713,6 +713,8 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
             else:
                 # Không đủ để đóng đủ kỳ hiện tại thì dừng
                 break
+        contract.TrangThai = TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
+    
     elif "TG" in ma_hd:
         # Trả Góp: đã có lịch thanh toán đầy đủ → phân bổ trên các bản ghi tương lai sẵn có
         contract = db.query(TraGop).filter(TraGop.MaHD == ma_hd).first()

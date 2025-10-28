@@ -34,13 +34,14 @@ def get_no_phai_thus(db: Session, time: str = "today") -> List[NoPhaiThuResponse
         results: List[NoPhaiThuResponse] = []
         for ma_hd in target_ids:
             # Determine contract type (TinChap or TraGop)
-            tc = db.query(TinChap).filter(TinChap.MaHD == ma_hd).first()
-            tg = None if tc else db.query(TraGop).filter(TraGop.MaHD == ma_hd).first()
-
-            if not tc and not tg:
+            tc = None
+            tg = None
+            if ma_hd.startswith("TC"):
+                tc = db.query(TinChap).filter(TinChap.MaHD == ma_hd).first()
+            elif ma_hd.startswith("TG"):
+                tg = db.query(TraGop).filter(TraGop.MaHD == ma_hd).first()
+            else:
                 continue
-
-            contract = tc if tc else tg
 
             # Fetch history
             lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all()
@@ -67,7 +68,7 @@ def get_no_phai_thus(db: Session, time: str = "today") -> List[NoPhaiThuResponse
                 tong_tien_vay_va_lai = so_tien_vay + lai_suat * so_ky_dong
             else:
                 # TraGop: approximate principal per period; fallback if SoLanTra is 0
-                so_lan_tra = tg.SoLanTra if tg.SoLanTra else 0
+                so_lan_tra = tg.SoLanTra
                 so_tien_tra_goc = (tg.SoTienVay // so_lan_tra) if so_lan_tra else 0
                 trang_thai = tg.TrangThai
                 ho_ten = tg.HoTen

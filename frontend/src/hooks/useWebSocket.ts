@@ -86,7 +86,7 @@ export function useWebSocketEvents<T = unknown>(
       return;
     }
 
-    console.log('[useWebSocketEvents] Subscribing to events:', events);
+    // console.log('[useWebSocketEvents] Subscribing to events:', events);
 
     const listener: WebSocketEventListener<T> = (eventData, message) => {
       setData(eventData);
@@ -101,7 +101,7 @@ export function useWebSocketEvents<T = unknown>(
     const unsubscribeFns = events.map(event => subscribe(event, listener));
 
     return () => {
-      console.log('[useWebSocketEvents] Unsubscribing from events:', events);
+      // console.log('[useWebSocketEvents] Unsubscribing from events:', events);
       unsubscribeFns.forEach(fn => fn());
     };
   }, [events.join(','), enabled, ws, onMessage, subscribe]);

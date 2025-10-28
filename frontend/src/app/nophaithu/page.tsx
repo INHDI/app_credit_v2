@@ -54,7 +54,7 @@ export default function NoPhaiThuPage() {
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPayStatus, setSelectedPayStatus] = useState("all");
+  const [selectedPayStatus, setSelectedPayStatus] = useState("Chưa đóng đủ");
   const [selectedDueStatus, setSelectedDueStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -69,7 +69,6 @@ export default function NoPhaiThuPage() {
       if (json?.success && Array.isArray(json.data)) {
         const mapped = json.data.map(mapApiItemToContract);
         setContracts(mapped);
-        console.log('🔄 NoPhaiThu data refreshed - Total:', mapped.length);
       } else {
         setContracts([]);
       }

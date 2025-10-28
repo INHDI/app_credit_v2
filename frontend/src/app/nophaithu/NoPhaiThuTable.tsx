@@ -166,8 +166,8 @@ export default function NoPhaiThuTable({
                     <div className="font-bold text-amber-600 text-sm">
                       {(() => {
                         // Nếu là hợp đồng trả góp, chia cho số lần trả
-                        if (contract.loai_hop_dong === 'Trả góp' && contract.raw?.SoLanTra) {
-                          return formatCurrency(contract.tien_can_tra_theo_ky / contract.raw.SoLanTra);
+                        if (contract.id.startsWith('TG') && contract.raw?.SoLanTra) {
+                          return formatCurrency(contract.tong_tien_can_tra / contract.raw?.SoLanTra);
                         }
                         return formatCurrency(contract.tien_can_tra_theo_ky);
                       })()}
@@ -317,8 +317,8 @@ export default function NoPhaiThuTable({
                   {(() => {
                     console.log(contract.raw);
                     // Nếu là hợp đồng trả góp, chia cho số lần trả
-                    if (contract.loai_hop_dong === 'Trả góp' && contract.raw?.SoLanTra) {
-                      return formatCurrency(contract.tien_can_tra_theo_ky / contract.raw.SoLanTra);
+                    if (contract.id.startsWith('TG') && contract.raw?.SoLanTra) {
+                      return formatCurrency(contract.tong_tien_can_tra / contract.raw?.SoLanTra);
                     }
                     return formatCurrency(contract.tien_can_tra_theo_ky);
                   })()}

@@ -233,13 +233,6 @@ export default function Dashboard() {
 
   const headerActions = (
     <div className="flex items-center gap-3">
-      <Button
-        variant="outline"
-        className="bg-white border-slate-200 hover:bg-slate-50 rounded-xl shadow-sm"
-      >
-        <BarChart3 className="h-4 w-4 mr-2" />
-        Xuất báo cáo
-      </Button>
       <div className="flex items-center gap-2">
         <Calendar className="h-4 w-4 text-slate-600" />
         <select

@@ -48,7 +48,6 @@ export default function LichSu() {
       
       if (response.success) {
         setLichSuData(response.data);
-        console.log('🔄 LichSu data refreshed');
       } else {
         setError(response.message || 'Không thể tải dữ liệu');
       }
