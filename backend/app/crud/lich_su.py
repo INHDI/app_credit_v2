@@ -208,54 +208,88 @@ def get_financial_statistics(
     # Initialize trend buckets
     trend_buckets = defaultdict(lambda: {
         "bucket": "",
-        "tong_tien_chi": 0.0,  # Disbursed (Tạo hợp đồng)
-        "tong_tien_thu": 0.0,  # Collected (Thanh toán + Tất toán)
-        "tong_tien_lai": 0.0,  # Interest only
+        "tong_tien_chi": 0.0,  # Disbursed (SoTienVay)
+        "tong_tien_thu": 0.0,  # Collected (TienDaTra)
+        "tong_tien_lai": 0.0,  # Interest
     })
+    summary_expected = 0.0
     
-    # Get all action records from LichSu table
-    action_records = db.query(LichSu).filter(
-        LichSu.ngay >= start_date,
-        LichSu.ngay <= end_date
+    # Get all contracts in date range
+    tin_chaps = db.query(TinChap).filter(
+        TinChap.NgayVay >= start_date,
+        TinChap.NgayVay <= end_date
+    ).all()
+    
+    tra_gops = db.query(TraGop).filter(
+        TraGop.NgayVay >= start_date,
+        TraGop.NgayVay <= end_date
+    ).all()
+    
+    # Calculate disbursed amount by period
+    for tc in tin_chaps:
+        bucket_key = _get_bucket_key(tc.NgayVay, granularity)
+        trend_buckets[bucket_key]["bucket"] = bucket_key
+        trend_buckets[bucket_key]["tong_tien_chi"] += float(tc.SoTienVay)
+        if tc.SoTienTraGoc > 0:
+            trend_buckets[bucket_key]["tong_tien_thu"] += float(tc.SoTienTraGoc)
+        summary_expected += float(tc.SoTienVay)
+    
+    for tg in tra_gops:
+        bucket_key = _get_bucket_key(tg.NgayVay, granularity)
+        trend_buckets[bucket_key]["bucket"] = bucket_key
+        trend_buckets[bucket_key]["tong_tien_chi"] += float(tg.SoTienVay)
+        summary_expected += float(tg.SoTienVay) + float(tg.LaiSuat)
+
+    
+    # Calculate collected amount and interest from payment history
+    paid_records = db.query(LichSuTraLai).filter(
+        LichSuTraLai.Ngay >= start_date,
+        LichSuTraLai.Ngay <= end_date,
+        or_(
+            LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.DONG_DU.value,
+            LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
+        )
     ).all()
     
     breakdown = {
-        "tin_chap": {"disbursed": 0.0, "collected": 0.0, "interest": 0.0},
-        "tra_gop": {"disbursed": 0.0, "collected": 0.0, "interest": 0.0}
+        "tin_chap": {"disbursed": 0.0, "collected": 0.0},
+        "tra_gop": {"disbursed": 0.0, "collected": 0.0}
     }
     
-    # Process each action record
-    for record in action_records:
-        bucket_key = _get_bucket_key(record.ngay, granularity)
+    for record in paid_records:
+        if not record.MaHD:
+            continue
+        
+        contract = _load_contract(db, record.MaHD)
+        if not contract:
+            continue
+        
+        bucket_key = _get_bucket_key(record.Ngay, granularity)
+        paid_amount = float(record.TienDaTra)
+        ctype = contract["contract_type"]
+        
         trend_buckets[bucket_key]["bucket"] = bucket_key
         
-        amount = float(record.so_tien)
-        contract_type = "tin_chap" if record.loai_hop_dong == "TC" else "tra_gop"
-        
-        # Categorize by action type
-        if "Tạo hợp đồng" in record.hanh_dong:
-            # Disbursed amount
-            trend_buckets[bucket_key]["tong_tien_chi"] += amount
-            breakdown[contract_type]["disbursed"] += amount
-            
-        elif "Thanh toán lãi" in record.hanh_dong:
-            # Interest payment
-            trend_buckets[bucket_key]["tong_tien_lai"] += amount
-            trend_buckets[bucket_key]["tong_tien_thu"] += amount
-            breakdown[contract_type]["interest"] += amount
-            breakdown[contract_type]["collected"] += amount
-            
-        elif "Trả gốc" in record.hanh_dong:
-            # Principal payment
-            trend_buckets[bucket_key]["tong_tien_thu"] += amount
-            breakdown[contract_type]["collected"] += amount
-            
-        elif "Tất toán" in record.hanh_dong:
-            # Settlement (principal + interest)
-            trend_buckets[bucket_key]["tong_tien_thu"] += amount
-            breakdown[contract_type]["collected"] += amount
+        breakdown[ctype]["collected"] += paid_amount
+        if ctype == "tin_chap":
+            trend_buckets[bucket_key]["tong_tien_thu"] += float(record.TienDaTra)
+        else:
+            trend_buckets[bucket_key]["tong_tien_thu"] += float(record.TienDaTra)
+    for tc in tin_chaps:
+        breakdown["tin_chap"]["disbursed"] += float(tc.SoTienVay)
+    for tg in tra_gops:
+        breakdown["tra_gop"]["disbursed"] += float(tg.SoTienVay)
     
-    # Calculate outstanding contracts from LichSuTraLai (for overdue info)
+    # Calculate outstanding contracts and overdue
+
+    tong_lai_tc = db.query(func.sum(LichSuTraLai.SoTien)).filter(
+        LichSuTraLai.Ngay >= start_date,
+        LichSuTraLai.Ngay <= end_date,
+        LichSuTraLai.MaHD.like("%TC%")
+    ).scalar()
+
+    summary_expected += tong_lai_tc
+
     outstanding_records = db.query(LichSuTraLai).filter(
         or_(
             LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.CHUA_THANH_TOAN.value,
@@ -311,12 +345,11 @@ def get_financial_statistics(
     # Calculate summary
     summary_disbursed = sum(item["tong_tien_chi"] for item in trend)
     summary_collected = sum(item["tong_tien_thu"] for item in trend)
-    summary_interest = sum(item["tong_tien_lai"] for item in trend)
     
     summary = {
         "total_disbursed": float(summary_disbursed),
         "total_collected": float(summary_collected),
-        "total_interest": float(summary_interest),
+        "total_expected": float(summary_expected),
         "net_cash_flow": float(summary_collected - summary_disbursed),
         "active_contracts": len(active_contracts),
         "overdue_contracts": len(overdue_contracts),
@@ -334,4 +367,3 @@ def get_financial_statistics(
         "trend": trend,
         "top_outstanding": top_outstanding,
     }
-

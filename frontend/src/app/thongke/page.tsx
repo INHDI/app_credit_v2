@@ -393,31 +393,6 @@ export default function ThongKe() {
     ];
   }, [totals, summary]);
 
-  const secondaryMetrics = useMemo(() => {
-    return [
-      {
-        title: "Hợp đồng hoạt động",
-        value: `${summary?.active_contracts ?? 0}`,
-        subtitle: "Có kỳ thanh toán đang mở",
-        tone: metricTone[0],
-        icon: <TrendingUp className="h-5 w-5 text-blue-500" />,
-      },
-      {
-        title: "Hợp đồng quá hạn",
-        value: `${summary?.overdue_contracts ?? 0}`,
-        subtitle: `Dư nợ: ${formatCurrency(totals.overdueAmount)}`,
-        tone: metricTone[3],
-        icon: <AlertCircle className="h-5 w-5 text-rose-500" />,
-      },
-      {
-        title: "Khoảng thời gian",
-        value: statistics ? `${statistics.meta.bucket_count} kỳ` : "Đang xử lý",
-        subtitle: statistics ? `${statistics.meta.start_date} → ${statistics.meta.end_date}` : "Đang tổng hợp dữ liệu",
-        tone: metricTone[2],
-        icon: <CalendarRange className="h-5 w-5 text-sky-500" />,
-      },
-    ];
-  }, [summary, totals.overdueAmount, statistics]);
 
   return (
     <div className="space-y-8" suppressHydrationWarning>
@@ -474,8 +449,7 @@ export default function ThongKe() {
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Tổng quan</p>
             <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
-              Dữ liệu gồm {statistics?.meta.bucket_count ?? "..."} kỳ{" "}
-              {granularity === "daily" ? "theo ngày" : granularity === "weekly" ? "theo tuần" : "theo tháng"}.
+              Khoảng thời gian: {startDate} → {endDate}
             </div>
           </div>
         </CardContent>
@@ -487,11 +461,7 @@ export default function ThongKe() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {secondaryMetrics.map((item) => (
-          <MetricCard key={item.title} title={item.title} value={item.value} subtitle={item.subtitle} tone={item.tone} icon={item.icon} />
-        ))}
-      </div>
+      {/* Secondary metrics removed */}
 
       <Card className="border-0 shadow-xl shadow-blue-50/40">
         <CardHeader className="border-b border-slate-100 pb-4">
