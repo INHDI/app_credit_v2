@@ -146,8 +146,25 @@ export default function NoPhaiThuPage() {
       color: "indigo"
     },
     {
-      title: "Nợ quá hạn",
-      value: contracts.filter(c => c.status === 'Nợ quá hạn').length.toString(),
+      title: "Cần thanh toán",
+      value: contracts.filter(c => {
+        const list: any[] = Array.isArray(c.raw?.LichSuTraLai) ? c.raw.LichSuTraLai : [];
+        const toDateOnly = (d: any): string => {
+          const dt = new Date(d);
+          dt.setHours(0, 0, 0, 0);
+          const y = dt.getFullYear();
+          const m = String(dt.getMonth() + 1).padStart(2, '0');
+          const da = String(dt.getDate()).padStart(2, '0');
+          return `${y}-${m}-${da}`;
+        };
+        const todayStr = toDateOnly(new Date());
+        const todayRec = list.find((it: any) => toDateOnly(it.Ngay) === todayStr) || null;
+        const trangThaiNgayThanhToan = todayRec?.TrangThaiNgayThanhToan || '';
+        const trangThaiThanhToan = todayRec?.TrangThaiThanhToan || '';
+        
+        return trangThaiNgayThanhToan === 'Đến hạn' && 
+               (trangThaiThanhToan === 'Chưa thanh toán' || trangThaiThanhToan === 'Thanh toán một phần');
+      }).length.toString(),
       icon: "AlertTriangle",
       color: "red"
     },

@@ -315,7 +315,7 @@ export default function NoPhaiThuTable({
                 <div className="text-xs text-slate-500">Kỳ/ngày</div>
                 <div className="text-sm font-bold text-amber-600">
                   {(() => {
-                    console.log(contract.raw);
+                    // console.log(contract.raw);
                     // Nếu là hợp đồng trả góp, chia cho số lần trả
                     if (contract.id.startsWith('TG') && contract.raw?.SoLanTra) {
                       return formatCurrency(contract.tong_tien_can_tra / contract.raw?.SoLanTra);
