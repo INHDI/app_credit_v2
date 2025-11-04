@@ -288,6 +288,17 @@ def get_financial_statistics(
         LichSuTraLai.MaHD.like("%TC%")
     ).scalar()
 
+    # func.sum returns None when there are no matching rows; ensure numeric value
+    if tong_lai_tc is None:
+        tong_lai_tc = 0.0
+    else:
+        # cast to float for consistent numeric operations
+        try:
+            tong_lai_tc = float(tong_lai_tc)
+        except Exception:
+            # fallback: if conversion fails, set to 0.0 to avoid breaking the summary
+            tong_lai_tc = 0.0
+
     summary_expected += tong_lai_tc
 
     outstanding_records = db.query(LichSuTraLai).filter(
