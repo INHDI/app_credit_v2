@@ -337,6 +337,7 @@ export default function GenericContractDetailModal({
           paymentAmount={selectedPayment.amount}
           onPaymentSuccess={handlePaymentSuccess}
           onProcessPayment={onProcessPayment}
+          tienCanThanhToanTheoKy={contract.so_ky_tra ? (Number(totalAmount) + Number(contract.lai_suat)) / Number(contract.so_ky_tra) : Number(contract.lai_suat)}
         />
       )}
     </Modal>

@@ -10,7 +10,7 @@ import { CalendarDays } from "lucide-react";
 interface NoPhaiThuDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  contract?: { ma_hop_dong: string; raw?: any } | null;
+  contract?: { ma_hop_dong: string; raw?: any; tien_can_tra_theo_ky: number } | null;
   onRefresh?: () => void;
 }
 
@@ -18,6 +18,12 @@ export default function NoPhaiThuDetailModal({ isOpen, onClose, contract, onRefr
   if (!isOpen || !contract) return null;
 
   const items = Array.isArray(contract.raw?.LichSuTraLai) ? contract.raw.LichSuTraLai : [];
+  let tienCanThanhToanTheoKy = 0;
+  if (contract.ma_hop_dong.startsWith("TC")) {
+    tienCanThanhToanTheoKy = contract?.tien_can_tra_theo_ky;
+  } else {
+    tienCanThanhToanTheoKy = (Number(contract?.raw.LaiSuat) + Number(contract?.raw.SoTienVay))/Number(contract?.raw.SoLanTra);
+  }
 
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<{ id: number; amount: number } | null>(null);
@@ -68,6 +74,7 @@ export default function NoPhaiThuDetailModal({ isOpen, onClose, contract, onRefr
           paymentAmount={selectedPayment.amount}
           onPaymentSuccess={handlePaymentSuccess}
           onProcessPayment={processPayment}
+          tienCanThanhToanTheoKy= {tienCanThanhToanTheoKy}
         />
       )}
     </>

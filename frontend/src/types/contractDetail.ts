@@ -25,6 +25,7 @@ export interface PaymentHistoryItem {
   trang_thai: string;
   ghi_chu?: string;
   created_at?: string;
+  tien_can_tra_theo_ky?: number;
 }
 
 // Tab Configuration

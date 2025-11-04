@@ -22,6 +22,7 @@ interface PaymentModalProps {
   paymentAmount: number;
   onPaymentSuccess: () => void;
   onProcessPayment?: (paymentId: number, amount: number) => Promise<void>;
+  tienCanThanhToanTheoKy: string | number;
 }
 
 export default function PaymentModal({ 
@@ -30,10 +31,11 @@ export default function PaymentModal({
   paymentId,
   paymentAmount,
   onPaymentSuccess,
-  onProcessPayment
+  onProcessPayment,
+  tienCanThanhToanTheoKy
 }: PaymentModalProps) {
   const [paymentType, setPaymentType] = useState<'full' | 'partial'>('full');
-  const [partialAmount, setPartialAmount] = useState<string>('');
+  const [partialAmount, setPartialAmount] = useState<string>(tienCanThanhToanTheoKy.toString());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 

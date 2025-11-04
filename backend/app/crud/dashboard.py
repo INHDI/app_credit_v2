@@ -100,6 +100,7 @@ def get_dashboard(db: Session, time_period: str = "all") -> DashboardResponse:
     tc_tien_cho_vay = sum(tc.SoTienVay for tc in tin_chaps)
     tc_tien_da_thu = 0
     tc_tien_no_can_tra = 0
+    tong_no = 0
     
     for tc in tin_chaps:
         lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == tc.MaHD).all()
@@ -107,7 +108,7 @@ def get_dashboard(db: Session, time_period: str = "all") -> DashboardResponse:
         tien_phai_tra = sum(ls.SoTien for ls in lich_sus)
         tc_tien_da_thu += tien_da_tra
         tc_tien_no_can_tra += max(0, tien_phai_tra - tien_da_tra)
-    
+        tong_no += tien_phai_tra
     # Calculate Trả Góp statistics
     tg_so_hop_dong = len(tra_gops)
     tg_tien_cho_vay = sum(tg.SoTienVay for tg in tra_gops)
@@ -120,11 +121,13 @@ def get_dashboard(db: Session, time_period: str = "all") -> DashboardResponse:
         tien_phai_tra = sum(ls.SoTien for ls in lich_sus)
         tg_tien_da_thu += tien_da_tra
         tg_tien_no_can_tra += max(0, tien_phai_tra - tien_da_tra)
+        tong_no += tien_phai_tra
     
     # Calculate totals
     tong_hop_dong = tc_so_hop_dong + tg_so_hop_dong
     tong_tien_da_thu = tc_tien_da_thu + tg_tien_da_thu
-    tong_tien_can_thu = tc_tien_no_can_tra + tg_tien_no_can_tra
+    # Tiền nợ cần trả (tổng các khoản chưa thu) + Tiền đang cho vay (tổng SoTienVay của hợp đồng)
+    tong_tien_can_thu = tong_no + tc_tien_cho_vay
     
     # Count contracts with debt (no_phai_thu)
     # no_phai_thu_count = 0
@@ -145,7 +148,6 @@ def get_dashboard(db: Session, time_period: str = "all") -> DashboardResponse:
         ),
         LichSuTraLai.TrangThaiNgayThanhToan == TrangThaiNgayThanhToan.DEN_HAN.value
     ).distinct().count()
-    print(no_phai_thu_count)
     
     # Calculate ti_le_lai_thu (% đã thu / chưa thu)
     tong_phai_thu = tong_tien_da_thu + tong_tien_can_thu

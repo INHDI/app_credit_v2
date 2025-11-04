@@ -1,7 +1,7 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: 'http://10.15.7.22:8088',
-  WS_URL: 'ws://10.15.7.22:8088',
+  BASE_URL: 'http://10.15.242.51:8000',
+  WS_URL: 'ws://10.15.242.51:8000',
   ENDPOINTS: {
     TIN_CHAP: '/tin-chap',
     TRA_GOP: '/tra-gop',

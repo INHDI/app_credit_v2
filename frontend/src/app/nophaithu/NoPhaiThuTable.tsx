@@ -77,6 +77,21 @@ export default function NoPhaiThuTable({
     }
   };
 
+  const tienCanThanhToanTheoKy = useMemo<number>(() => {
+    const c = selectedContract;
+    if (!c) return 0;
+
+    if (c.ma_hop_dong?.startsWith("TC")) {
+      return Number(c.tien_can_tra_theo_ky) || 0;
+    }
+
+    const laiSuat  = Number(c.raw?.LaiSuat) || 0;
+    const soTienVay = Number(c.raw?.SoTienVay) || 0;
+    const soLanTra = Number(c.raw?.SoLanTra) || 0;
+
+    return soLanTra > 0 ? (laiSuat + soTienVay) / soLanTra : 0;
+  }, [selectedContract]);
+
   const handleSettleClick = (contract: NoPhaiThuContract) => {
     setSelectedContract(contract);
     setShowSettleModal(true);
@@ -88,8 +103,9 @@ export default function NoPhaiThuTable({
   };
 
   const handleClosePaymentModal = () => {
-    setShowPaymentModal(false);
-    setSelectedContract(null);
+    setShowPaymentModal(false);      // làm trigger unmount
+    setSelectedPayment(null);        // optional nhưng nên có
+    setSelectedContract(null);       // như bạn đang làm
   };
 
   const handleCloseSettleModal = () => {
@@ -356,9 +372,10 @@ export default function NoPhaiThuTable({
       </div>
 
       {/* Payment Modal */}
-      {selectedPayment && (
+      {showPaymentModal && selectedPayment && selectedContract && (
         <PaymentModal
-          isOpen={showPaymentModal}
+          key={`${selectedContract.id}-${selectedPayment.id}`} // ép remount khi chọn hợp đồng/bản ghi khác
+          isOpen={true}                                        // đã cổng bằng showPaymentModal rồi
           onClose={handleClosePaymentModal}
           paymentId={selectedPayment.id}
           paymentAmount={selectedPayment.amount}
@@ -366,8 +383,10 @@ export default function NoPhaiThuTable({
           onProcessPayment={async (paymentId, amount) => {
             await payInterestByRecord(paymentId, amount);
           }}
+          tienCanThanhToanTheoKy={tienCanThanhToanTheoKy}
         />
       )}
+
 
       <SettleConfirmModal
         isOpen={showSettleModal}

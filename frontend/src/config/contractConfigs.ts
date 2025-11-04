@@ -130,7 +130,7 @@ export const contractConfigs: Record<ContractType, ContractModalConfig> = {
       ngay_vay: new Date(),
       so_tien_vay: 0,
       ky_dong: 1,
-      so_lan_tra: 1,
+      so_lan_tra: 50,
       lai_suat: 0
     }
   }

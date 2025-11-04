@@ -139,12 +139,12 @@ export default function NoPhaiThuPage() {
       icon: "FileText",
       color: "blue"
     },
-    {
-      title: "Đến hạn",
-      value: contracts.filter(c => c.status === 'Đến hạn').length.toString(),
-      icon: "Clock",
-      color: "indigo"
-    },
+    // {
+    //   title: "Đến hạn",
+    //   value: contracts.filter(c => c.status === 'Đến hạn').length.toString(),
+    //   icon: "Clock",
+    //   color: "indigo"
+    // },
     {
       title: "Cần thanh toán",
       value: contracts.filter(c => {

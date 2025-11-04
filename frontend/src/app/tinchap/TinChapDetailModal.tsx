@@ -361,6 +361,7 @@ export default function TinChapDetailModal({
           paymentAmount={selectedPayment.amount}
           onPaymentSuccess={handlePaymentSuccess}
           onProcessPayment={processPaymentInterest}
+          tienCanThanhToanTheoKy= {formatCurrency(contract.LaiSuat || contract.lai_suat || 0)}
         />
       )}
     </Modal>
