@@ -352,6 +352,7 @@ def get_financial_statistics(
     
     # Convert trend buckets to sorted list
     trend = sorted(trend_buckets.values(), key=lambda x: x["bucket"])
+    # print("trend",trend)
     
     # Calculate summary
     summary_disbursed = sum(item["tong_tien_chi"] for item in trend)

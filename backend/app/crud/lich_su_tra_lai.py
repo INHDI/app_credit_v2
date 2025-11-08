@@ -125,10 +125,15 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
         if loai_hop_dong == "TG":
             # Trả Góp: Tạo đủ số kỳ theo SoLanTra
             so_lan_tra = data_hop_dong.SoLanTra
-            ngay_ky_hien_tai = ngay_vay  # Kỳ đầu tiên
-            
+            # Nếu có nhiều kỳ (N > 1) thì theo yêu cầu, kỳ đầu tiên = date_now + (N-1) days
+            # (ví dụ N=3 -> ngày đầu = today + 2 days)
+            if so_lan_tra and so_lan_tra > 1:
+                ngay_ky_hien_tai = date_now + timedelta(days=(so_lan_tra - 1))
+            else:
+                ngay_ky_hien_tai = date_now
+
             for ky_thu in range(0, so_lan_tra):
-                ky_thu+=1
+                ky_thu += 1
                 danh_sach_ky.append({
                     "ngay": ngay_ky_hien_tai,
                     "ky_thu": ky_thu,
@@ -203,7 +208,7 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
                     # Các kỳ chưa đến hạn: SoTien = số tiền cố định
                     # so_tien = so_tien_moi_ky
                     so_ky_qua_han = sum(1 for k in danh_sach_ky if k["ngay"] < date_now)
-                    so_tien = so_tien_moi_ky * (so_ky_qua_han + 1)
+                    so_tien = so_tien_moi_ky
                 
             else:
                 # Tín Chấp: Logic cộng dồn (các kỳ cũ = 0, kỳ cuối = tổng cộng dồn)
@@ -372,7 +377,7 @@ def auto_create_lich_su(db: Session) -> dict:
     """
     try:
         date_now = date.today()
-        # date_now = date(2025, 10, 24)
+        # date_now = date(2025, 11, 6)
         contracts_processed = 0
         records_created = 0
         records_updated = 0
@@ -557,11 +562,11 @@ def auto_create_lich_su(db: Session) -> dict:
                     ls.NoiDung = f"Trả lãi kỳ {ky_so}"
 
             # Tạo bản ghi mới cho hôm nay với số tiền = (Gốc+Lãi)/Số lần + cộng dồn
-            so_tien_moi_ky = (contract.SoTienVay + contract.LaiSuat) // contract.SoLanTra
-            if end_date < date_now:
-                so_tien_ky_moi = tong_tien_chua_tra
-            else:
-                so_tien_ky_moi = so_tien_moi_ky + tong_tien_chua_tra
+            # so_tien_moi_ky = (contract.SoTienVay + contract.LaiSuat) // contract.SoLanTra
+            # if end_date < date_now:
+            #     so_tien_ky_moi = tong_tien_chua_tra
+            # else:
+            so_tien_ky_moi = tong_tien_chua_tra
             
             db_lich_su = LichSuTraLai(
                 MaHD=ma_hd,
