@@ -384,11 +384,18 @@ def auto_create_lich_su(db: Session) -> dict:
         
         tin_chap_contracts = db.execute(select(TinChap).where(TinChap.TrangThai != "DA_TAT_TOAN")).scalars().all()
         tra_gop_contracts = db.execute(select(TraGop).where(TraGop.TrangThai != "DA_TAT_TOAN")).scalars().all()
-        # 3. Xử lý Tín Chấp
+        # Xử lý Tín Chấp
         for contract in tin_chap_contracts:
             ma_hd = contract.MaHD
             # Chuẩn hóa trạng thái ngày cho TẤT CẢ bản ghi theo date_now
             all_records_tc = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all()
+            date_today_exists = any(rec.Ngay == date_now for rec in all_records_tc)
+            if date_today_exists:
+                continue
+            # Kiểm tra hôm nay có phải là ngày đóng lãi không
+            ky_dong = contract.KyDong
+            if (date_now.day - contract.NgayVay.day) % ky_dong != 0:
+                continue
             for rec in all_records_tc:
                 if rec.Ngay < date_now:
                     rec.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.QUA_HAN.value
@@ -396,10 +403,7 @@ def auto_create_lich_su(db: Session) -> dict:
                     rec.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.DEN_HAN.value
                 else:
                     rec.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
-            # Kiểm tra hôm nay có phải là ngày đóng lãi không
-            ky_dong = contract.KyDong
-            if (date_now.day - contract.NgayVay.day) % ky_dong != 0:
-                continue
+            
             
             # Tính số tiền cộng dồn từ tất cả các kỳ chưa trả
             tong_tien_chua_tra = 0
@@ -456,6 +460,10 @@ def auto_create_lich_su(db: Session) -> dict:
                 .order_by(LichSuTraLai.Ngay.asc())
                 .all()
             )
+            date_today_exists = any(rec.Ngay == date_now for rec in all_records_tg)
+            if date_today_exists:
+                continue
+            
             end_date = all_records_tg[-1].Ngay
             if end_date < date_now:
                 continue
