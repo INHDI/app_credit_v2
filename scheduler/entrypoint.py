@@ -120,7 +120,7 @@ def start_cron():
     try:
         # Create crontab entry for daily execution at 5:00 AM
         crontab_entry = (
-            "0 5 * * * "
+            "0 1 * * * "
             ". /app/.container_env 2>/dev/null || true; "
             f"{sys.executable} /app/run_daily_payments.py"
         )
