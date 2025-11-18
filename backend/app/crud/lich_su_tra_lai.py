@@ -127,8 +127,8 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
             so_lan_tra = data_hop_dong.SoLanTra
             # Nếu có nhiều kỳ (N > 1) thì theo yêu cầu, kỳ đầu tiên = date_now + (N-1) days
             # (ví dụ N=3 -> ngày đầu = today + 2 days)
-            if so_lan_tra and so_lan_tra > 1:
-                ngay_ky_hien_tai = date_now + timedelta(days=(so_lan_tra - 1))
+            if ky_dong and ky_dong > 1:
+                ngay_ky_hien_tai = date_now + timedelta(days=(ky_dong - 1))
             else:
                 ngay_ky_hien_tai = date_now
 
@@ -144,7 +144,7 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
             # Tín Chấp: Tạo kỳ từ NgayVay đến hôm nay (logic cũ)
             ngay_ky_hien_tai = ngay_vay + timedelta(days=ky_dong)  # Kỳ đầu tiên
             ky_thu = 0
-            if ngay_vay == date_now:
+            if ngay_vay == date_now and ky_dong == 1:
                 ky_thu += 1
                 danh_sach_ky.append({
                     "ngay": ngay_vay,
