@@ -180,10 +180,16 @@ export default function NoPhaiThuPage() {
     try {
       setLoading(true);
       setError(null);
+      
+      // Gọi API auto-create lịch sử trả lãi
+      await ApiService.autoCreateLichSu();
+      
+      // Sau đó lấy dữ liệu mới
       const json = await ApiService.getNoPhaiThu('today');
       if (json?.success && Array.isArray(json.data)) {
         const mapped = json.data.map(mapApiItemToContract);
         setContracts(mapped);
+        setSuccess('Làm mới dữ liệu thành công');
       } else {
         setContracts([]);
       }

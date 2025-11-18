@@ -22,9 +22,14 @@ if [ -f /app/.container_env ]; then
     . /app/.container_env
 fi
 
-# API endpoints from environment variables (after sourcing)
-TRA_GOP_URL="${TRA_GOP_API_URL}"
-TIN_CHAP_URL="${TRA_LAI_TIN_CHAP_API_URL}"
+# API endpoints: derive from URL_API_BACKEND
+# If URL_API_BACKEND already points to a full endpoint, use it directly.
+# Otherwise, assume it is a base URL and append paths as needed.
+BASE_URL="${URL_API_BACKEND}"
+
+# If BASE_URL is empty, warn and scripts will skip calls below
+TRA_GOP_URL="${BASE_URL}"
+TIN_CHAP_URL="${BASE_URL}"
 
 call_api() {
     label="$1"
@@ -38,46 +43,23 @@ call_api() {
     log "$label URL: $url"
     log "Calling $label API..."
 
+    # Use curl's built-in retry mechanism so a simple POST like:
+    # curl -X 'POST' 'http://backend:8000/lich-su-tra-lai/auto-create-lich-su' -H 'accept: application/json' -d ''
+    # will be sufficient. --fail makes curl return non-zero on HTTP errors (>=400).
     set +e
-    # Retry up to 5 times with exponential backoff to tolerate backend cold starts
-    attempt=1
-    max_attempts=5
-    backoff=2
-    while true; do
-        response=$(curl -s -w "HTTPSTATUS:%{http_code}" -X 'POST' \
-          "${url}" \
-          -H 'accept: application/json' \
-          -d '')
-        curl_exit=$?
-        if [ $curl_exit -eq 0 ]; then
-            break
-        fi
-        if [ $attempt -ge $max_attempts ]; then
-            break
-        fi
-        log "WARN: $label curl failed (exit $curl_exit). Retry $attempt/$max_attempts after ${backoff}s"
-        sleep "$backoff"
-        attempt=$((attempt+1))
-        backoff=$((backoff*2))
-    done
+    response=$(curl -sS --fail --show-error --retry 5 --retry-delay 2 --retry-connrefused -X 'POST' \
+      "${url}" \
+      -H 'accept: application/json' \
+      -d '' 2>&1)
+    curl_exit=$?
     set -e
 
     if [ $curl_exit -ne 0 ]; then
-        log "ERROR: $label curl failed with exit code $curl_exit"
+        log "ERROR: $label curl failed (exit $curl_exit): $response"
         return $curl_exit
     fi
 
-    http_code=$(echo "$response" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
-    body=$(echo "$response" | sed -e 's/HTTPSTATUS\:.*//g')
-
-    log "$label HTTP Status: $http_code"
-    log "$label Response: $body"
-
-    if [ "$http_code" -ne 200 ]; then
-        log "ERROR: $label API failed (status $http_code)"
-        return 1
-    fi
-
+    log "$label Response: $response"
     log "SUCCESS: $label API completed"
     return 0
 }

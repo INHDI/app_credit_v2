@@ -72,6 +72,17 @@ export class ApiService {
   static async getLichSu(params?: Record<string, string>) {
     return this.request(API_CONFIG.ENDPOINTS.LICH_SU, {}, params);
   }
+
+  // Lich Su Tra Lai API
+  static async autoCreateLichSu(): Promise<ApiResponse<unknown>> {
+    return this.request<ApiResponse<unknown>>(
+      API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI + '/auto-create-lich-su',
+      {
+        method: 'POST',
+        headers: API_HEADERS.JSON,
+      }
+    );
+  }
 }
 
 export default ApiService;

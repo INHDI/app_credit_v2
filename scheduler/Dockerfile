@@ -1,8 +1,8 @@
-# Simple scheduler using Alpine Linux with cron
-FROM alpine:3.18
+# Python-based scheduler with cron
+FROM python:3.11-alpine
 
-# Install curl, cronie (cron daemon), and timezone data
-RUN apk add --no-cache curl cronie tzdata
+# Install cronie (cron daemon) and timezone data
+RUN apk add --no-cache cronie tzdata
 
 # Set timezone to Vietnam
 RUN cp /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime && \
@@ -11,19 +11,18 @@ RUN cp /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime && \
 # Create directory for scripts
 RUN mkdir -p /app
 
-# Copy scripts
-COPY run_daily_payments.sh /app/run_daily_payments.sh
-COPY entrypoint.sh /app/entrypoint.sh
+# Copy Python scripts
+COPY run_daily_payments.py /app/run_daily_payments.py
+COPY entrypoint.py /app/entrypoint.py
+
+# Install Python dependencies
+RUN pip install --no-cache-dir requests pytz
 
 # Make scripts executable
-RUN chmod +x /app/run_daily_payments.sh /app/entrypoint.sh
+RUN chmod +x /app/run_daily_payments.py /app/entrypoint.py
 
-# Create crontab file - 0:00 AM Vietnam time every day
-# We do not redirect here because the script already logs into /var/log/daily_payments.log
-RUN echo "0 5 * * * . /app/.container_env 2>/dev/null || true; /app/run_daily_payments.sh" > /etc/crontabs/root
-
-# Create log file
-RUN touch /var/log/daily_payments.log
+# Create log directory and file
+RUN mkdir -p /var/log && touch /var/log/daily_payments.log
 
 # Entrypoint handles initial run, cron and log tailing
-CMD ["/app/entrypoint.sh"]
+CMD ["/app/entrypoint.py"]
