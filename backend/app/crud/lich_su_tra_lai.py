@@ -128,9 +128,9 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
             # Nếu có nhiều kỳ (N > 1) thì theo yêu cầu, kỳ đầu tiên = date_now + (N-1) days
             # (ví dụ N=3 -> ngày đầu = today + 2 days)
             if ky_dong and ky_dong > 1:
-                ngay_ky_hien_tai = date_now + timedelta(days=(ky_dong - 1))
-            else:
-                ngay_ky_hien_tai = date_now
+                ngay_ky_hien_tai = ngay_vay + timedelta(days=(ky_dong - 1))
+            elif ky_dong == 1 :
+                ngay_ky_hien_tai = ngay_vay
 
             for ky_thu in range(0, so_lan_tra):
                 ky_thu += 1
