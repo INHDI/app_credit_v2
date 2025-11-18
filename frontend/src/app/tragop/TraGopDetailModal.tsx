@@ -6,6 +6,8 @@ import { ContractDetailType } from '@/types/contractDetail';
 import { ContractDetailData, PaymentHistoryItem } from '@/types/contractDetail';
 import type { CreditContract as TraGopContract } from '@/hooks/useTraGop';
 import { payInterestByRecord } from '@/services/paymentApi';
+import { useWebSocketEvents } from '@/hooks/useWebSocket';
+import { WebSocketEventType } from '@/types/websocket';
 // import { getTraLaiByContract, processPayment } from '@/apis/traLaiTraGop-api';
 
 interface TraGopDetailModalProps {
@@ -21,6 +23,23 @@ export default function TraGopDetailModal({
   contract,
   onRefresh
 }: TraGopDetailModalProps) {
+
+  // Subscribe to WebSocket payment events for real-time updates
+  useWebSocketEvents(
+    [
+      WebSocketEventType.LICH_SU_TRA_LAI_UPDATED,
+      WebSocketEventType.LICH_SU_TRA_LAI_CREATED,
+      WebSocketEventType.TIN_CHAP_UPDATED
+    ],
+    (data, message) => {
+      console.log('📡 TinChapDetailModal received WebSocket event:', message.type);
+      // Trigger refresh khi có payment events
+      if (isOpen && onRefresh) {
+        onRefresh();
+      }
+    },
+    isOpen // Only subscribe when modal is open
+  );
   const config = getContractDetailConfig(ContractDetailType.TRA_GOP);
 
   // Map API contract to Generic modal data shape

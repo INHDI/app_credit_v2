@@ -34,12 +34,14 @@ interface PaymentRecord {
 }
 
 interface PaymentsListProps {
+  contractStatus: string;
   items: PaymentRecord[];
   onPayClick?: (id: number, remain: number) => void;
   disablePayWhen?: (record: PaymentRecord) => boolean;
 }
 
-export default function PaymentsList({ items, onPayClick, disablePayWhen }: PaymentsListProps) {
+export default function PaymentsList({ contractStatus, items, onPayClick, disablePayWhen }: PaymentsListProps) {
+  
   const safeItems = Array.isArray(items) ? items : [];
   
   // Get today's date for button visibility logic
@@ -69,7 +71,6 @@ export default function PaymentsList({ items, onPayClick, disablePayWhen }: Paym
   return (
     <div className="space-y-2 sm:space-y-3 max-h-96 overflow-y-auto">
       {sorted.map((payment, idx) => {
-        const isPaid = payment.TrangThaiThanhToan === 'Đóng đủ' || payment.TrangThaiThanhToan === 'Đã tất toán';
         const payClass = getPayStatusClass(payment.TrangThaiThanhToan || '');
         const dueClass = getDueStatusClass(payment.TrangThaiNgayThanhToan || '');
 
@@ -105,7 +106,7 @@ export default function PaymentsList({ items, onPayClick, disablePayWhen }: Paym
               <div className="flex items-center gap-2 self-end sm:self-auto">
                 <Badge className={`${payClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiThanhToan}</Badge>
                 <Badge className={`${dueClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiNgayThanhToan}</Badge>
-                {onPayClick && !disablePay && isToday && (
+                {!contractStatus.includes("Đã tất toán") && onPayClick && !disablePay && isToday && (
                   <Button
                     size="sm"
                     onClick={() => onPayClick(Number(id), remain)}

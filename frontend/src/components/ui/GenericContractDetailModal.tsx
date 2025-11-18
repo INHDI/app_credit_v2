@@ -246,6 +246,7 @@ export default function GenericContractDetailModal({
                 </div>
               ) : (
                 <PaymentsList
+                  contractStatus={contract.status}
                   items={paymentHistory as any}
                   onPayClick={(id, remain) => handlePayment(Number(id), remain)}
                   disablePayWhen={(p) => p.TrangThaiNgayThanhToan === 'Quá hạn' || p.TrangThaiNgayThanhToan === 'Quá kỳ đóng lãi'}
@@ -304,7 +305,7 @@ export default function GenericContractDetailModal({
       </div>
 
       {/* Tab Content - Responsive padding */}
-      <div className="p-3 sm:p-6 max-h-[60vh] sm:max-h-[80vh] overflow-y-auto">
+      <div className="p-3 sm:p-6 max-h-[60vh] sm:max-h-[80vh]">
         {renderTabContent()}
       </div>
 

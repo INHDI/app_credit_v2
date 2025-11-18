@@ -56,6 +56,7 @@ export default function NoPhaiThuDetailModal({ isOpen, onClose, contract, onRefr
               <span className="truncate">Lịch sử trả lãi nợ phải thu</span>
             </h4>
             <PaymentsList 
+              contractStatus={contract.raw?.TrangThai || ''}
               items={items}
               onPayClick={(id, remain) => handleOpenPayment(id, remain)}
               disablePayWhen={(p) => p.TrangThaiNgayThanhToan === 'Quá hạn' || p.TrangThaiNgayThanhToan === 'Quá kỳ đóng lãi'}
