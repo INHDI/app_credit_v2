@@ -108,13 +108,15 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                 <td className="p-4 text-center">
                   <div className="flex flex-col gap-1 items-center">
                     <Badge className={`${
-                      contract.TrangThai === 'Chưa thanh toán' 
-                        ? 'bg-amber-100 text-amber-700' 
-                        : contract.TrangThai === 'Đã thanh toán'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
+                      (contract.TrangThai || '').includes('tất toán')
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : (contract.TrangThai || '').includes('một phần')
+                        ? 'bg-blue-100 text-blue-700'
+                        : (contract.TrangThai || '').includes('Đóng đủ')
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : 'bg-amber-100 text-amber-700'
                     } border-0 font-medium px-3 py-1 rounded-full shadow-sm`}>
-                      {contract.TrangThai}
+                      {contract.TrangThai || contract.status}
                     </Badge>
                   </div>
                 </td>
@@ -242,7 +244,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
               <div className="flex items-center justify-end gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="default" size="sm" className="rounded-lg flex-1" onClick={() => handleOpenDetail(contract)}>
+                    <Button variant="outline" size="sm" className="rounded-lg flex-1" onClick={() => handleOpenDetail(contract)}>
                       <Eye className="h-4 w-4 mr-1" /> Chi tiết
                     </Button>
                   </TooltipTrigger>
@@ -271,7 +273,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                 {onDelete && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="destructive" size="sm" className="rounded-lg flex-1" onClick={() => { setSelectedForDelete(contract); setShowDelete(true); }}>
+                      <Button variant="outline" size="sm" className="rounded-lg flex-1 bg-red-50" onClick={() => { setSelectedForDelete(contract); setShowDelete(true); }}>
                         <Trash2 className="h-4 w-4 mr-1" /> Xóa
                       </Button>
                     </TooltipTrigger>

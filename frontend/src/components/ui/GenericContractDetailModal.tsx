@@ -20,6 +20,8 @@ import { ContractDetailData, PaymentHistoryItem, DetailTab } from '@/types/contr
 import { ContractDetailConfig } from '@/types/contractDetail';
 import PaymentModal from './PaymentModal';
 import PaymentsList from './PaymentsList';
+import PrincipalPaymentModal from "./PrincipalPaymentModal";
+import { payPrincipalTinChap } from "@/services/paymentApi";
 
 interface GenericContractDetailModalProps {
   isOpen: boolean;
@@ -45,6 +47,7 @@ export default function GenericContractDetailModal({
   const [loading, setLoading] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<{id: number, amount: number} | null>(null);
+  const [principalModalOpen, setPrincipalModalOpen] = useState(false);
 
   // Fetch payment history when modal opens
   useEffect(() => {
@@ -324,7 +327,28 @@ export default function GenericContractDetailModal({
           <span className="hidden sm:inline">In hợp đồng</span>
           <span className="sm:hidden">In</span>
         </Button>
+        {config.contractType === 'tin_chap' &&
+        <Button
+          onClick={() => setPrincipalModalOpen(true)}
+          className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg px-4 sm:px-8 text-sm flex-1 sm:flex-none"
+        >
+          Thanh toán gốc
+        </Button>}
       </div>
+
+      {contract && (
+        <PrincipalPaymentModal
+          isOpen={principalModalOpen}
+          onClose={() => setPrincipalModalOpen(false)}
+          maHopDong={(contract as any).MaHD || (contract as any).ma_hop_dong}
+          remainingPrincipal={(contract as any).GocConLai || 0}
+          onPaymentSuccess={() => { onRefresh && onRefresh(); }}
+          onProcessPayment={async (amount) => {
+            const maHD = (contract as any).MaHD || (contract as any).ma_hop_dong;
+            await payPrincipalTinChap(maHD, amount);
+          }}
+        />
+      )}
 
       {/* Payment Modal */}
       {selectedPayment && (

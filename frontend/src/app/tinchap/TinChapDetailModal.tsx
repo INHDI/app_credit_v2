@@ -65,6 +65,7 @@ export default function TinChapDetailModal({
           : (contract.TrangThai || '').includes('một phần')
           ? 'bg-blue-100 text-blue-700'
           : 'bg-amber-100 text-amber-700',
+        GocConLai: contract.GocConLai, 
       }
     : null;
   // Load payment history for Tra Gop (prefer data from contract if available)

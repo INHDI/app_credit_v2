@@ -125,6 +125,7 @@ export default function NoPhaiThuTable({
               <th className="text-left p-4 font-semibold text-slate-700 text-sm">Khách hàng</th>
               <th className="text-left p-4 font-semibold text-slate-700 text-sm">Loại hợp đồng</th>
               <th className="text-right p-4 font-semibold text-slate-700 text-sm">Tổng phải trả</th>
+              <th className="text-right p-4 font-semibold text-slate-700 text-sm">Tiền còn lại</th>
               <th className="text-right p-4 font-semibold text-slate-700 text-sm">Kỳ/ngày</th>
               <th className="text-right p-4 font-semibold text-slate-700 text-sm">Nợ chưa trả</th>
               <th className="text-center p-4 font-semibold text-slate-700 text-sm">Trạng thái</th>
@@ -175,6 +176,19 @@ export default function NoPhaiThuTable({
                   <div className="space-y-1">
                     <div className="font-bold text-slate-800 text-sm">{formatCurrency(contract.tong_tien_can_tra)}</div>
                     <div className="text-xs text-slate-500">VNĐ</div>
+                  </div>
+                </td>
+                <td className="p-4 text-right">
+                  <div className="space-y-1">
+                    <div className="font-bold text-amber-600 text-sm">
+                      {(() => {
+                        // Nếu là hợp đồng trả góp, chia cho số lần trả
+                        if (contract.id.startsWith('TG')) {
+                          return formatCurrency(contract.raw.TongTienVayVaLai - contract.raw.SoTienTraGoc - contract.raw.LaiDaTra);
+                        }
+                        return formatCurrency(contract.raw.LaiConLai);
+                      })()}
+                    </div>
                   </div>
                 </td>
                 <td className="p-4 text-right">
@@ -318,7 +332,7 @@ export default function NoPhaiThuTable({
               )}
             </div>
             
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-3 gap-2">
               <div>
                 <div className="text-xs text-slate-500">Loại</div>
                 <div className="text-sm font-medium text-slate-800">{contract.loai_hop_dong}</div>
@@ -344,10 +358,26 @@ export default function NoPhaiThuTable({
                 <div className="text-xs text-slate-500">Nợ chưa trả</div>
                 <div className="text-sm font-bold text-red-700">{formatCurrency(contract.tongNoChuaTra)}</div>
               </div>
+              <div className="text-right">
+                <div className="text-xs text-slate-500">Tiền còn lại</div>
+                <div className="text-sm font-bold text-slate-800">
+                  {(() => {
+                    // Nếu là hợp đồng trả góp, chia cho số lần trả
+                    if (contract.id.startsWith('TG')) {
+                      return formatCurrency(contract.raw.TongTienVayVaLai - contract.raw.SoTienTraGoc - contract.raw.LaiDaTra);
+                    }
+                    return formatCurrency(contract.raw.LaiConLai);
+                  })()}
+                </div>
+              </div>
             </div>
             
             <div className="mt-3 flex items-center justify-end gap-2">
-              <Button variant="default" size="sm" className="rounded-lg flex-1">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="rounded-lg border-green-200 text-green-700 hover:bg-green-50 flex-1"
+                onClick={() => handleOpenDetail(contract)}>
                 <Eye className="h-4 w-4 mr-1" /> Chi tiết
               </Button>
               <Button 
