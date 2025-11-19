@@ -8,6 +8,7 @@ import { CreditContract } from "@/hooks/useTinChap";
 import DeleteConfirmModal from "@/components/ui/DeleteConfirmModal";
 import TinChapSettleModal from "./TinChapSettleModal";
 import TinChapDetailModal from "./TinChapDetailModal";
+import EditHDModal from "@/components/ui/editHDModal";
 
 interface TinChapTableProps {
   contracts: CreditContract[];
@@ -28,7 +29,8 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
   const [selectedForSettle, setSelectedForSettle] = useState<CreditContract | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [selectedForDetail, setSelectedForDetail] = useState<CreditContract | null>(null);
-  const [showEditContract, setShowEditContract] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [selectedForEdit, setSelectedForEdit] = useState<CreditContract | null>(null);
 
   const handleOpenSettle = (contract: CreditContract) => {
     setSelectedForSettle(contract);
@@ -50,10 +52,15 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
     setSelectedForDetail(null);
   };
 
-  const handleEditContract = (contract: CreditContract) => {
-    showEditContract(false);
-    setShowEditContract(contract);
-  }
+  const handleOpenEdit = (contract: CreditContract) => {
+    setSelectedForEdit(contract);
+    setShowEdit(true);
+  };
+
+  const handleCloseEdit = () => {
+    setShowEdit(false);
+    setSelectedForEdit(null);
+  };
 
 
   return (
@@ -150,14 +157,17 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-9 w-9 p-0 hover:bg-green-50 rounded-lg transition-all duration-200 hover:shadow-sm" 
+                          className="h-9 w-9 p-0 hover:bg-amber-50 rounded-lg transition-all duration-200 hover:shadow-sm" 
                           aria-label="Chỉnh sửa"
-                          onClick={() => handleEditContract(contract)}>
-                          <Edit className="h-4 w-4 text-green-600" />
+                          onClick={() => handleOpenEdit(contract)}>
+                          <Edit className="h-4 w-4 text-amber-600" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Chỉnh sửa hợp đồng</p>
+                        {(contract.LaiDaTra > 0 || contract.SoTienTraGoc > 0) && (
+                          <p className="text-xs text-amber-400 mt-1">⚠️ Có thanh toán - không thể sửa</p>
+                        )}
                       </TooltipContent>
                     </Tooltip>
                     
@@ -228,12 +238,16 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                 </Badge>
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-3 gap-2">
               <div>
-                <div className="text-xs text-slate-500">Kỳ đóng: {contract.KyDong} ngày</div>
-                <div className="text-sm font-medium text-slate-800">Lãi: {formatCurrency(contract.LaiSuat)}/kỳ</div>
+                <div className="text-xs text-slate-500">Kỳ đóng</div>
+                <div className="text-sm font-medium text-slate-800">{contract.KyDong} ngày</div>
               </div>
-              <div className="text-right">
+              <div>
+                <div className="text-xs text-slate-500">Lãi suất</div>
+                <div className="text-sm font-medium text-slate-800">{formatCurrency(contract.LaiSuat)}/kỳ</div>
+              </div>
+              <div>
                 <div className="text-xs text-slate-500">Số tiền vay</div>
                 <div className="text-sm font-bold text-slate-800">{formatCurrency(contract.SoTienVay)}</div>
               </div>
@@ -252,7 +266,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
             </div>
             
             <div className="mt-3 space-y-2">
-              <div className="flex items-center justify-end gap-2">
+              <div className="grid grid-cols-2 gap-2 items-center">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="sm" className="rounded-lg flex-1" onClick={() => handleOpenDetail(contract)}>
@@ -263,6 +277,20 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                     <p>Xem chi tiết hợp đồng</p>
                   </TooltipContent>
                 </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" className="rounded-lg border-amber-200 text-amber-700 hover:bg-amber-50 flex-1" onClick={() => handleOpenEdit(contract)}>
+                      <Edit className="h-4 w-4 mr-1" /> Sửa
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Chỉnh sửa hợp đồng</p>
+                    {(contract.LaiDaTra > 0 || contract.SoTienTraGoc > 0) && (
+                      <p className="text-xs text-amber-400 mt-1">⚠️ Có thanh toán - không thể sửa</p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+                              
                 {/* Chỉ hiển thị nút tất toán khi chưa tất toán */}
                 {contract.status !== 'da_thanh_toan' && (
                   <Tooltip>
@@ -284,7 +312,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                 {onDelete && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" className="rounded-lg flex-1 bg-red-50" onClick={() => { setSelectedForDelete(contract); setShowDelete(true); }}>
+                      <Button variant="outline" size="sm" className="rounded-lg border-red-200 text-red-700 hover:bg-red-50 flex-1" onClick={() => { setSelectedForDelete(contract); setShowDelete(true); }}>
                         <Trash2 className="h-4 w-4 mr-1" /> Xóa
                       </Button>
                     </TooltipTrigger>
@@ -332,6 +360,15 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
         } : undefined}
       />
     )}
+
+    {/* Edit Modal */}
+    <EditHDModal
+      isOpen={showEdit}
+      onClose={handleCloseEdit}
+      contractType="tin-chap"
+      contract={selectedForEdit}
+      onSuccess={onSettled}
+    />
     </TooltipProvider>
   );
 }

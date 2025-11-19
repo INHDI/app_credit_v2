@@ -362,6 +362,51 @@ def delete_lich_sus_by_contract(db: Session, ma_hd: str) -> int:
         raise HTTPException(status_code=500, detail=f"Lỗi khi xóa lịch sử trả lãi: {str(e)}")
 
 
+def update_lich_sus_by_contract(db: Session, ma_hd: str) -> int:
+    """
+    Delete all payment history records for a specific contract and update the contract
+    
+    Args:
+        db: Database session
+        ma_hd: Contract ID
+        
+    Returns:
+        Number of records deleted
+    """
+    try:
+        # Lấy tất cả bản ghi lịch sử của hợp đồng
+        lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all()
+        
+        if not lich_sus:
+            return 0
+        
+        # # Kiểm tra tổng số tiền đã thanh toán
+        tong_so_tien = sum(lich_su.TienDaTra for lich_su in lich_sus)
+        
+        if tong_so_tien > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Không thể xóa lịch sử trả lãi vì đã có {tong_so_tien:,} VNĐ được thanh toán. Vui lòng hoàn tất thanh toán trước khi chỉnh sửa."
+            )
+        
+        delete_lich_su_utils(db, ma_hd=ma_hd)
+        
+        # Đếm số bản ghi trước khi xóa
+        so_ban_ghi = len(lich_sus)
+        
+        # Xóa tất cả bản ghi
+        for lich_su in lich_sus:
+            db.delete(lich_su)
+        
+        # Commit vào database
+        db.commit()
+        
+        return so_ban_ghi
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Lỗi khi xóa lịch sử trả lãi: {str(e)}")
+
 def auto_create_lich_su(db: Session) -> dict:
     """
     Tự động cập nhật lịch sử trả lãi cho tất cả hợp đồng chưa thanh toán

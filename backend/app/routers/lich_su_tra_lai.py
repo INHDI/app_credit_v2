@@ -102,6 +102,26 @@ async def delete_lich_su_by_contract(ma_hd: str, db: Session = Depends(get_db)):
         data={"MaHD": ma_hd, "records_deleted": so_ban_ghi_da_xoa}, 
         message=f"Xóa {so_ban_ghi_da_xoa} bản ghi lịch sử trả lãi cho hợp đồng {ma_hd} thành công"
     )
+    
+@router.delete("/contract/update/{ma_hd}", response_model=ApiResponse[Any])
+async def update_lich_su_by_contract(ma_hd: str, db: Session = Depends(get_db)):
+    """Delete all payment history records for a specific contract"""
+    so_ban_ghi_da_xoa = crud_lich_su.update_lich_sus_by_contract(db=db, ma_hd=ma_hd)
+    if so_ban_ghi_da_xoa == 0:
+        raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi cho hợp đồng này")
+    
+    # Broadcast WebSocket event
+    await broadcast_lich_su_tra_lai_event(
+        manager=manager,
+        event_type=EventType.LICH_SU_TRA_LAI_DELETED,
+        lich_su_data={"ma_hd": ma_hd, "records_deleted": so_ban_ghi_da_xoa},
+        message=f"Xóa {so_ban_ghi_da_xoa} bản ghi lịch sử trả lãi cho hợp đồng {ma_hd}"
+    )
+    
+    return ApiResponse.success_response(
+        data={"MaHD": ma_hd, "records_deleted": so_ban_ghi_da_xoa}, 
+        message=f"Xóa {so_ban_ghi_da_xoa} bản ghi lịch sử trả lãi cho hợp đồng {ma_hd} thành công"
+    )
 
 @router.post("/pay/{stt}", response_model=ApiResponse[Any])
 async def pay_lich_su(

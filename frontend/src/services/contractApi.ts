@@ -118,3 +118,84 @@ export const createContractWithPaymentHistory = async (
 
   return { contractResponse, paymentResponse };
 };
+
+// Update contract functions
+export const updateTinChapContract = async (maHD: string, data: any): Promise<ContractCreateResponse> => {
+  const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.TIN_CHAP}/${maHD}`, {
+    method: 'PUT',
+    headers: API_HEADERS.JSON,
+    body: JSON.stringify(transformTinChapToBackend(data))
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  }
+
+  return await response.json();
+};
+
+export const updateTraGopContract = async (maHD: string, data: any): Promise<ContractCreateResponse> => {
+  const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.TRA_GOP}/${maHD}`, {
+    method: 'PUT',
+    headers: API_HEADERS.JSON,
+    body: JSON.stringify(transformTraGopToBackend(data))
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  }
+
+  return await response.json();
+};
+
+// Delete payment history by contract
+export const deleteLichSuByContract = async (maHD: string): Promise<any> => {
+  const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/contract/update/${maHD}`, {
+    method: 'DELETE',
+    headers: API_HEADERS.JSON_ACCEPT
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    // Extract error message from various possible error formats
+    const errorMessage = errorData.detail || errorData.error?.detail || errorData.message || `Lỗi khi xóa lịch sử thanh toán (HTTP ${response.status})`;
+    throw new Error(errorMessage);
+  }
+
+  return await response.json();
+};
+
+// Combined workflow for updating contract with payment history recreation
+export const updateContractWithPaymentHistory = async (
+  contractType: 'tin-chap' | 'tra-gop',
+  maHD: string,
+  data: any
+): Promise<{ contractResponse: ContractCreateResponse; deleteResponse: any; paymentResponse: LichSuTraLaiResponse }> => {
+  // Step 1: Update contract
+  const contractResponse = contractType === 'tin-chap' 
+    ? await updateTinChapContract(maHD, data)
+    : await updateTraGopContract(maHD, data);
+
+  if (!contractResponse.success) {
+    throw new Error(contractResponse.message || 'Failed to update contract');
+  }
+
+  // Step 2: Delete old payment history (only if SoTien = 0)
+  try {
+    const deleteResponse = await deleteLichSuByContract(maHD);
+    
+    // Step 3: Create new payment history
+    const paymentResponse = await createLichSuTraLai(maHD);
+
+    if (!paymentResponse.success) {
+      throw new Error(paymentResponse.message || 'Failed to create payment history');
+    }
+
+    return { contractResponse, deleteResponse, paymentResponse };
+  } catch (error: any) {
+    // If delete fails due to payments, throw error with details
+    throw new Error(error.message || 'Failed to update payment history');
+  }
+};

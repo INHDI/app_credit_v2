@@ -308,12 +308,12 @@ export default function GenericContractDetailModal({
       </div>
 
       {/* Tab Content - Responsive padding */}
-      <div className="p-3 sm:p-6 max-h-[60vh] sm:max-h-[80vh]">
+      <div className="p-3 sm:p-6 max-h-[60vh] sm:max-h-[80vh] overflow-y-auto">
         {renderTabContent()}
       </div>
 
-      {/* Footer Actions - Responsive */}
-      <div className="sticky bottom-0 z-10 flex items-center justify-between sm:justify-end gap-2 sm:gap-4 p-3 sm:p-6 border-t border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50/30">
+      {/* Footer Actions - Responsive - Sticky */}
+      <div className="sticky bottom-0 z-10 flex items-center justify-between sm:justify-end gap-2 sm:gap-4 p-3 sm:p-6 border-t border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50/30 backdrop-blur-sm">
         <Button
           variant="outline"
           onClick={onClose}

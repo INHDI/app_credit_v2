@@ -180,7 +180,7 @@ export default function NoPhaiThuTable({
                 </td>
                 <td className="p-4 text-right">
                   <div className="space-y-1">
-                    <div className="font-bold text-amber-600 text-sm">
+                    <div className="font-bold text-blue-600 text-sm">
                       {(() => {
                         // Nếu là hợp đồng trả góp, chia cho số lần trả
                         if (contract.id.startsWith('TG')) {
@@ -205,7 +205,7 @@ export default function NoPhaiThuTable({
                   </div>
                 </td>
                 <td className="p-4 text-right">
-                  <div className="font-bold text-red-700">{formatCurrency(contract.tongNoChuaTra)}</div>
+                  <div className="font-bold text-red-600">{formatCurrency(contract.tongNoChuaTra)}</div>
                 </td>
                 <td className="p-4 text-center">
                   {todayRec ? (
@@ -334,18 +334,13 @@ export default function NoPhaiThuTable({
             
             <div className="mt-3 grid grid-cols-3 gap-2">
               <div>
-                <div className="text-xs text-slate-500">Loại</div>
+                <div className="text-xs text-slate-500">Loại HĐ</div>
                 <div className="text-sm font-medium text-slate-800">{contract.loai_hop_dong}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-slate-500">Tổng phải trả</div>
-                <div className="text-sm font-bold text-slate-800">{formatCurrency(contract.tong_tien_can_tra)}</div>
               </div>
               <div>
                 <div className="text-xs text-slate-500">Kỳ/ngày</div>
                 <div className="text-sm font-bold text-amber-600">
                   {(() => {
-                    // console.log(contract.raw);
                     // Nếu là hợp đồng trả góp, chia cho số lần trả
                     if (contract.id.startsWith('TG') && contract.raw?.SoLanTra) {
                       return formatCurrency(contract.tong_tien_can_tra / contract.raw?.SoLanTra);
@@ -354,15 +349,15 @@ export default function NoPhaiThuTable({
                   })()}
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-xs text-slate-500">Nợ chưa trả</div>
-                <div className="text-sm font-bold text-red-700">{formatCurrency(contract.tongNoChuaTra)}</div>
+              <div>
+                <div className="text-xs text-slate-500">Tổng phải trả</div>
+                <div className="text-sm font-bold text-slate-800">{formatCurrency(contract.tong_tien_can_tra)}</div>
               </div>
-              <div className="text-right">
+              <div>
                 <div className="text-xs text-slate-500">Tiền còn lại</div>
-                <div className="text-sm font-bold text-slate-800">
+                <div className="text-sm font-bold text-blue-600">
                   {(() => {
-                    // Nếu là hợp đồng trả góp, chia cho số lần trả
+                    // Nếu là hợp đồng trả góp
                     if (contract.id.startsWith('TG')) {
                       return formatCurrency(contract.raw.TongTienVayVaLai - contract.raw.SoTienTraGoc - contract.raw.LaiDaTra);
                     }
@@ -370,13 +365,17 @@ export default function NoPhaiThuTable({
                   })()}
                 </div>
               </div>
+              <div>
+                <div className="text-xs text-slate-500">Nợ chưa trả</div>
+                <div className="text-sm font-bold text-red-600">{formatCurrency(contract.tongNoChuaTra)}</div>
+              </div>
             </div>
             
             <div className="mt-3 flex items-center justify-end gap-2">
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="rounded-lg border-green-200 text-green-700 hover:bg-green-50 flex-1"
+                className="rounded-lg border-blue-200 text-blue-700 hover:bg-blue-50 flex-1"
                 onClick={() => handleOpenDetail(contract)}>
                 <Eye className="h-4 w-4 mr-1" /> Chi tiết
               </Button>

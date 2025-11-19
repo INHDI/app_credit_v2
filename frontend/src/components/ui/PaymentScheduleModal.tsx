@@ -164,19 +164,13 @@ export default function PaymentScheduleModal({
                 <Calendar className="h-5 w-5 text-blue-600" />
                 Thông tin hợp đồng
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-white rounded-lg p-3 border border-blue-100">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-xs font-medium text-slate-600 uppercase tracking-wide">Mã hợp đồng</span>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-slate-500 mb-2">Mã hợp đồng</div>
                   <p className="font-bold text-lg text-slate-800">{contractInfo?.ma_hop_dong || contract?.MaHD || contract?.ma_hop_dong}</p>
                 </div>
-                <div className="bg-white rounded-lg p-3 border border-blue-100">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs font-medium text-slate-600 uppercase tracking-wide">Khách hàng</span>
-                  </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-2">Khách hàng</div>
                   <p className="font-bold text-lg text-slate-800">{contractInfo?.ten_khach_hang || contract?.HoTen || contract?.ten_khach_hang}</p>
                 </div>
               </div>
@@ -184,23 +178,23 @@ export default function PaymentScheduleModal({
               {/* Additional contract details if available */}
               {(contract?.NgayVay || contract?.SoTienVay || contract?.KyDong) && (
                 <div className="mt-4 pt-4 border-t border-blue-100">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                  <div className="grid grid-cols-3 gap-3">
                     {contract?.NgayVay && (
                       <div>
-                        <span className="text-slate-600">Ngày vay:</span>
-                        <p className="font-medium text-slate-800">{new Date(contract.NgayVay).toLocaleDateString('vi-VN')}</p>
+                        <div className="text-xs text-slate-500 mb-1">Ngày vay</div>
+                        <p className="font-semibold text-slate-800">{new Date(contract.NgayVay).toLocaleDateString('vi-VN')}</p>
                       </div>
                     )}
                     {contract?.SoTienVay && (
                       <div>
-                        <span className="text-slate-600">Số tiền vay:</span>
-                        <p className="font-medium text-slate-800">{formatCurrency(contract.SoTienVay)}</p>
+                        <div className="text-xs text-slate-500 mb-1">Số tiền vay</div>
+                        <p className="font-bold text-slate-800">{formatCurrency(contract.SoTienVay)}</p>
                       </div>
                     )}
                     {contract?.KyDong && (
                       <div>
-                        <span className="text-slate-600">Kỳ đóng:</span>
-                        <p className="font-medium text-slate-800">{contract.KyDong} ngày</p>
+                        <div className="text-xs text-slate-500 mb-1">Kỳ đóng</div>
+                        <p className="font-semibold text-slate-800">{contract.KyDong} ngày</p>
                       </div>
                     )}
                   </div>
@@ -210,13 +204,12 @@ export default function PaymentScheduleModal({
 
             {/* Next Payment Info */}
             {nextPayment ? (
-              <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-200">
+              <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
                 <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <ArrowRight className="h-5 w-5 text-emerald-600" />
                   Kỳ thanh toán tiếp theo
                 </h4>
                 
-                <div className="space-y-4">
+                <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600">Ngày thanh toán:</span>
                     <span className="font-semibold text-slate-800">{formatDate(nextPayment.thoi_gian)}</span>
@@ -304,7 +297,7 @@ export default function PaymentScheduleModal({
                           </div>
                           <div className="text-right">
                             <p className="font-bold text-amber-700">{formatCurrency(item.so_tien - item.so_tien_tra)}</p>
-                            <p className={`text-xs px-2 py-1 rounded-full ${getStatusColor(getDaysUntilPayment(item.thoi_gian), item.TrangThaiNgayThanhToan)}`}>
+                            <p className={`text-xs px-2 py-1 rounded-full text-center ${getStatusColor(getDaysUntilPayment(item.thoi_gian), item.TrangThaiNgayThanhToan)}`}>
                               {item.TrangThaiNgayThanhToan || getDaysUntilPayment(item.thoi_gian)}
                             </p>
                             {item.so_tien_tra > 0 && (

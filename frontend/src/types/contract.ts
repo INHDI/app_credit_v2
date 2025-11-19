@@ -42,6 +42,7 @@ export interface FieldConfig {
   type: FieldType;
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean; // For read-only fields
   icon?: React.ComponentType<{ className?: string }>;
   options?: SelectOption[];
   gridCols?: number; // For responsive grid layout

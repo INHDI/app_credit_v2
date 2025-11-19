@@ -36,13 +36,16 @@ export default function GenericContractModal({
   const apiError = externalError || localError;
   const apiSuccess = externalSuccess || localSuccess;
 
-  // Set today's date only on client side to avoid hydration mismatch
-  useEffect(() => {
-    const todayDate = new Date();
-    setFormData(prev => ({ ...prev, ngay_vay: todayDate }));
-  }, []);
-
   const [formData, setFormData] = useState<Record<string, any>>(config.defaultValues);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Update formData when config.defaultValues changes (for edit mode)
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(config.defaultValues);
+      setIsInitialized(true);
+    }
+  }, [config.defaultValues, isOpen]);
 
   // Handle input changes with proper type conversion
   const handleInputChange = (field: FieldConfig, value: string | number | Date) => {
@@ -120,8 +123,9 @@ export default function GenericContractModal({
 
     const commonProps = {
       placeholder: field.placeholder,
-      className: "rounded-xl border-slate-200 focus:border-emerald-300",
-      required: field.required
+      className: `rounded-xl border-slate-200 focus:border-emerald-300 ${field.disabled ? 'bg-slate-100 cursor-not-allowed' : ''}`,
+      required: field.required,
+      disabled: field.disabled
     };
 
     const labelElement = (
@@ -257,16 +261,16 @@ export default function GenericContractModal({
       {/* Error Message */}
       {apiError && (
         <div className="mx-6 mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
+          <div className="flex items-start">
+            <div className="flex-shrink-0 mt-0.5">
               <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
             </div>
-            <div className="ml-3">
+            <div className="ml-3 flex-1">
               <h3 className="text-sm font-medium text-red-800">Lỗi</h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>{apiError}</p>
+              <div className="mt-2 text-sm text-red-700 whitespace-pre-wrap">
+                {apiError}
               </div>
             </div>
           </div>

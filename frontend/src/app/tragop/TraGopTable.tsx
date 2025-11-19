@@ -2,13 +2,14 @@ import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Eye, Calendar, CheckCircle, Trash2 } from 'lucide-react';
+import { Eye, Calendar, CheckCircle, Trash2, Edit } from 'lucide-react';
 import { formatCurrency } from "@/utils/formatters";
 import { CreditContract } from "@/hooks/useTraGop";
 import PaymentScheduleModal from "@/components/ui/PaymentScheduleModal";
 import TraGopDetailModal from "./TraGopDetailModal";
 import SettleConfirmModal from "@/components/ui/SettleConfirmModal";
 import DeleteConfirmModal from "@/components/ui/DeleteConfirmModal";
+import EditHDModal from "@/components/ui/editHDModal";
 
 interface TraGopTableProps {
   contracts: CreditContract[];
@@ -31,6 +32,8 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
   const [selectedForDelete, setSelectedForDelete] = useState<CreditContract | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [selectedForDetail, setSelectedForDetail] = useState<CreditContract | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [selectedForEdit, setSelectedForEdit] = useState<CreditContract | null>(null);
 
   const handleOpenPaymentSchedule = (contract: CreditContract) => {
     setSelectedContract(contract);
@@ -60,6 +63,16 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
   const handleCloseDetail = () => {
     setShowDetail(false);
     setSelectedForDetail(null);
+  };
+
+  const handleOpenEdit = (contract: CreditContract) => {
+    setSelectedForEdit(contract);
+    setShowEdit(true);
+  };
+
+  const handleCloseEdit = () => {
+    setShowEdit(false);
+    setSelectedForEdit(null);
   };
 
   return (
@@ -161,6 +174,27 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                           <p>Xem lịch thanh toán</p>
                         </TooltipContent>
                       </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 w-9 p-0 hover:bg-amber-50 rounded-lg transition-all duration-200 hover:shadow-sm"
+                            aria-label="Chỉnh sửa"
+                            onClick={() => handleOpenEdit(contract)}
+                          >
+                            <Edit className="h-4 w-4 text-amber-600" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Chỉnh sửa hợp đồng</p>
+                          {(contract.DaThanhToan > 0 || parseFloat(contract.tien_da_tra || '0') > 0) && (
+                            <p className="text-xs text-amber-400 mt-1">⚠️ Có thanh toán - không thể sửa</p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -222,23 +256,30 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                     : 'bg-amber-100 text-amber-700'
                 } border-0 font-medium px-2 py-0.5 rounded-full`}>{contract.TrangThai || contract.status}</Badge>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <div className="text-right">
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div>
+                  <div className="text-xs text-slate-500">Kỳ đóng</div>
+                  <div className="text-sm font-medium text-slate-800">{contract.KyDong} ngày</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">Số lần trả</div>
+                  <div className="text-sm font-bold text-amber-600">{contract.SoLanTra || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">Lãi suất</div>
+                  <div className="text-sm font-medium text-slate-800">{formatCurrency(contract.LaiSuat || 0)}</div>
+                </div>
+                <div>
                   <div className="text-xs text-slate-500">Số tiền vay</div>
                   <div className="text-sm font-bold text-slate-800">{formatCurrency(contract.SoTienVay || contract.tong_tien_can_tra || 0)}</div>
-                  <div className="text-xs text-slate-500">Lãi: {formatCurrency(contract.LaiSuat || 0)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500">Đã trả</div>
                   <div className="text-sm font-bold text-green-600">{formatCurrency(contract.DaThanhToan || parseFloat(contract.tien_da_tra || '0'))}</div>
                 </div>
-                <div className="text-right">
+                <div>
                   <div className="text-xs text-slate-500">Còn lại</div>
                   <div className="text-sm font-bold text-blue-600">{formatCurrency(contract.ConLai || parseFloat(contract.tong_tien_con_lai || '0'))}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500">Số lần trả</div>
-                  <div className="text-sm font-bold text-amber-600">{contract.SoLanTra || '-'}</div>
                 </div>
               </div>
               <div className="mt-3 space-y-2">
@@ -255,7 +296,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="default" size="sm" className="rounded-lg flex-1" onClick={() => handleOpenDetail(contract)}>
+                      <Button variant="outline" size="sm" className="rounded-lg flex-1" onClick={() => handleOpenDetail(contract)}>
                         <Eye className="h-4 w-4 mr-1" /> Chi tiết
                       </Button>
                     </TooltipTrigger>
@@ -265,6 +306,19 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                   </Tooltip>
                 </div>
                 <div className="flex items-center justify-end gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" className="rounded-lg border-amber-200 text-amber-700 hover:bg-amber-50 flex-1" onClick={() => handleOpenEdit(contract)}>
+                        <Edit className="h-4 w-4 mr-1" /> Sửa
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Chỉnh sửa hợp đồng</p>
+                      {(contract.DaThanhToan > 0 || parseFloat(contract.tien_da_tra || '0') > 0) && (
+                        <p className="text-xs text-amber-400 mt-1">⚠️ Có thanh toán - không thể sửa</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="sm" className="rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50 flex-1" onClick={() => handleOpenSettle(contract)}>
@@ -278,7 +332,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                   {onDelete && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="destructive" size="sm" className="rounded-lg flex-1" onClick={() => { setSelectedForDelete(contract); setShowDelete(true); }}>
+                        <Button variant="outline" size="sm" className="rounded-lg border-red-200 text-red-700 hover:bg-red-50 flex-1" onClick={() => { setSelectedForDelete(contract); setShowDelete(true); }}>
                           <Trash2 className="h-4 w-4 mr-1" /> Xóa
                         </Button>
                       </TooltipTrigger>
@@ -334,6 +388,15 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
           } : undefined}
         />
       )}
+
+      {/* Edit Modal */}
+      <EditHDModal
+        isOpen={showEdit}
+        onClose={handleCloseEdit}
+        contractType="tra-gop"
+        contract={selectedForEdit}
+        onSuccess={onSettled}
+      />
     </TooltipProvider>
   );
 }
