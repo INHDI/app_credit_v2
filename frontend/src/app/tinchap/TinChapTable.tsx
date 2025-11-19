@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Eye, Trash2, DollarSign } from 'lucide-react';
+import { Eye, Trash2, DollarSign, Edit } from 'lucide-react';
 import { formatCurrency } from "@/utils/formatters";
 import { CreditContract } from "@/hooks/useTinChap";
 import DeleteConfirmModal from "@/components/ui/DeleteConfirmModal";
@@ -28,6 +28,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
   const [selectedForSettle, setSelectedForSettle] = useState<CreditContract | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [selectedForDetail, setSelectedForDetail] = useState<CreditContract | null>(null);
+  const [showEditContract, setShowEditContract] = useState(false);
 
   const handleOpenSettle = (contract: CreditContract) => {
     setSelectedForSettle(contract);
@@ -48,6 +49,11 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
     setShowDetail(false);
     setSelectedForDetail(null);
   };
+
+  const handleEditContract = (contract: CreditContract) => {
+    showEditContract(false);
+    setShowEditContract(contract);
+  }
 
 
   return (
@@ -139,16 +145,21 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                       </TooltipContent>
                     </Tooltip>
                     
-                    {/* <Tooltip>
+                    <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 hover:bg-green-50 rounded-lg transition-all duration-200 hover:shadow-sm" aria-label="Chỉnh sửa">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-9 w-9 p-0 hover:bg-green-50 rounded-lg transition-all duration-200 hover:shadow-sm" 
+                          aria-label="Chỉnh sửa"
+                          onClick={() => handleEditContract(contract)}>
                           <Edit className="h-4 w-4 text-green-600" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Chỉnh sửa hợp đồng</p>
                       </TooltipContent>
-                    </Tooltip> */}
+                    </Tooltip>
                     
                     {/* Chỉ hiển thị nút tất toán khi chưa tất toán */}
                     {contract.status !== 'da_thanh_toan' && (

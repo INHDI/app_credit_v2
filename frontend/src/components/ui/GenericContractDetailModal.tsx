@@ -321,12 +321,6 @@ export default function GenericContractDetailModal({
         >
           Đóng
         </Button>
-        <Button
-          className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl shadow-lg px-4 sm:px-8 text-sm flex-1 sm:flex-none"
-        >
-          <span className="hidden sm:inline">In hợp đồng</span>
-          <span className="sm:hidden">In</span>
-        </Button>
         {config.contractType === 'tin_chap' &&
         <Button
           onClick={() => setPrincipalModalOpen(true)}
