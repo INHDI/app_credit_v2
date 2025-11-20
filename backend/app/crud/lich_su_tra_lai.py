@@ -506,7 +506,7 @@ def auto_create_lich_su(db: Session) -> dict:
                 .all()
             )
             date_today_exists = any(rec.Ngay == date_now for rec in all_records_tg)
-            if date_today_exists:
+            if not date_today_exists:
                 continue
             
             end_date = all_records_tg[-1].Ngay
