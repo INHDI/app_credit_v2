@@ -248,26 +248,28 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
         raise HTTPException(status_code=500, detail=f"Lỗi khi tạo lịch sử: {str(e)}")
 
 
-def update_lich_su(db: Session, stt: int, lich_su_update: LichSuTraLaiUpdate) -> Optional[LichSuTraLai]:
+def update_lich_su(db: Session, stt: int, tien_da_tra: int = 0):
     """
     Update a payment history record
     
     Args:
         db: Database session
         stt: Record ID
-        lich_su_update: Update data
+        tien_da_tra: Amount paid
         
     Returns:
-        Updated LichSuTraLai object or None if not found
+        dict: Thông tin thành công với số bản ghi đã cập nhật
     """
     db_lich_su = get_lich_su(db, stt)
     
     if not db_lich_su:
         return None
     
-    update_data = lich_su_update.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_lich_su, key, value)
+    db_lich_su.TienDaTra = tien_da_tra
+    if db_lich_su.TienDaTra >= db_lich_su.SoTien:
+        db_lich_su.TrangThaiThanhToan = TrangThaiThanhToan.DONG_DU.value
+    else:
+        db_lich_su.TrangThaiThanhToan = TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
     
     db.commit()
     db.refresh(db_lich_su)

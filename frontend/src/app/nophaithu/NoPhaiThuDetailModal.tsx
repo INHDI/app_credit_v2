@@ -58,8 +58,9 @@ export default function NoPhaiThuDetailModal({ isOpen, onClose, contract, onRefr
             <PaymentsList 
               contractStatus={contract.raw?.TrangThai || ''}
               items={items}
-              onPayClick={(id, remain) => handleOpenPayment(id, remain)}
+              onPayClick={(id, remain) => handleOpenPayment(Number(id), remain)}
               disablePayWhen={(p) => p.TrangThaiNgayThanhToan === 'Quá hạn' || p.TrangThaiNgayThanhToan === 'Quá kỳ đóng lãi'}
+              onEditSuccess={handlePaymentSuccess}
             />
           </div>
         </div>

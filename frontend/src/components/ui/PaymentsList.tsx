@@ -1,10 +1,14 @@
 "use client";
 
+import { useState, ChangeEvent } from "react";
+import Modal from "@/components/ui/Modal";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatters";
 import { getDuePriority, getDueStatusClass, getPayStatusClass } from "@/utils/statusHelpers";
+import { updatePaymentHistory } from "@/services/paymentApi";
 
 // Function to format payment content with proper line breaks
 const formatPaymentContent = (content: string) => {
@@ -36,17 +40,26 @@ interface PaymentRecord {
 interface PaymentsListProps {
   contractStatus: string;
   items: PaymentRecord[];
-  // onPayClick?: (id: number, remain: number) => void;
   disablePayWhen?: (record: PaymentRecord) => boolean;
+  onEditSuccess?: () => void;
+  onPayClick?: (id: number | string, remain: number) => void;
 }
 
-export default function PaymentsList({ contractStatus, items, disablePayWhen }: PaymentsListProps) {
-  
+export default function PaymentsList({
+  contractStatus,
+  items,
+  disablePayWhen,
+  onEditSuccess,
+  onPayClick,
+}: PaymentsListProps) {
+  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null);
+  const [editAmount, setEditAmount] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+  const [fieldError, setFieldError] = useState<string>("");
+  const [resultModal, setResultModal] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [maxPayable, setMaxPayable] = useState<number>(0);
+
   const safeItems = Array.isArray(items) ? items : [];
-  
-  // Get today's date for button visibility logic
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
   
   // Sort: Status priority (Đến hạn > Chưa đến hạn > Quá hạn) then by time (ascending)
   const sorted = [...safeItems].sort((a, b) => {
@@ -69,6 +82,7 @@ export default function PaymentsList({ contractStatus, items, disablePayWhen }: 
   }
 
   return (
+    <>
     <div className="space-y-2 sm:space-y-3 max-h-96 overflow-y-auto">
       {sorted.map((payment, idx) => {
         const payClass = getPayStatusClass(payment.TrangThaiThanhToan || '');
@@ -83,11 +97,6 @@ export default function PaymentsList({ contractStatus, items, disablePayWhen }: 
         const id = (payment as any).Stt ?? payment.id ?? idx; // ID thực để gửi data
         const dateStr = new Date(payment.Ngay || (payment as any).ngay_tra_lai).toLocaleDateString('vi-VN');
         
-        // Check if payment date is today for button visibility
-        const paymentDate = new Date(payment.Ngay || (payment as any).ngay_tra_lai);
-        const paymentDateStr = paymentDate.toISOString().split('T')[0];
-        const isToday = paymentDateStr === todayStr;
-
         return (
           <div key={`payments-list-${id}`} className="bg-white rounded-lg p-3 sm:p-4 border border-slate-200">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
@@ -106,23 +115,178 @@ export default function PaymentsList({ contractStatus, items, disablePayWhen }: 
               <div className="flex items-center gap-2 self-end sm:self-auto">
                 <Badge className={`${payClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiThanhToan}</Badge>
                 <Badge className={`${dueClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiNgayThanhToan}</Badge>
-                {/* {!contractStatus.includes("Đã tất toán") && onPayClick && !disablePay && isToday && (
+                {onPayClick && !contractStatus.includes("Đã tất toán") && !disablePay && (
                   <Button
                     size="sm"
-                    onClick={() => onPayClick(Number(id), remain)}
+                    variant="outline"
+                    className="rounded-lg px-2 sm:px-3 py-1 text-xs flex-shrink-0"
+                    onClick={() => onPayClick(id, remain)}
+                  >
+                    Thanh toán
+                  </Button>
+                )}
+                {!contractStatus.includes("Đã tất toán") && (
+                  <Button
+                    size="sm"
                     className="bg-green-500 hover:bg-green-600 text-white rounded-lg px-2 sm:px-3 py-1 text-xs flex-shrink-0"
+                    onClick={() => {
+                      const currentPaid = Number((payment as any).TienDaTra ?? payment.so_tien_tra ?? 0);
+                      setEditAmount(String(currentPaid));
+                      setFieldError("");
+                      const totalDue = Number((payment as any).SoTien ?? payment.so_tien_lai ?? 0);
+                      setMaxPayable(totalDue);
+                      setEditingPayment(payment);
+                    }}
                   >
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    <span className="hidden sm:inline">Thanh toán</span>
-                    <span className="sm:hidden">Trả</span>
+                    <span className="hidden sm:inline">Sửa</span>
+                    <span className="sm:hidden">Sửa</span>
                   </Button>
-                )} */}
+                )}
               </div>
             </div>
           </div>
         );
       })}
     </div>
+
+      {editingPayment && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setEditingPayment(null);
+            setEditAmount("");
+            setFieldError("");
+            setMaxPayable(0);
+          }}
+          title="Chỉnh sửa số tiền đã trả"
+          size="sm"
+        >
+          <div className="space-y-4 p-4">
+            <div>
+              <p className="text-sm text-slate-600">Kỳ thanh toán</p>
+              <p className="text-base font-semibold text-slate-800">
+                {new Date(editingPayment.Ngay || (editingPayment as any).ngay_tra_lai).toLocaleDateString("vi-VN")}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700" htmlFor="editAmount">
+                Số tiền đã trả
+              </label>
+              <Input
+                id="editAmount"
+                type="text"
+                value={editAmount}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  const raw = e.target.value;
+                  const cleaned = raw.replace(/[^0-9]/g, "");
+                  const numeric = Number(cleaned);
+                  if (maxPayable > 0 && numeric > maxPayable) {
+                    setEditAmount(String(maxPayable));
+                    setFieldError(`Số tiền tối đa là ${formatCurrency(maxPayable)}`);
+                  } else {
+                    setEditAmount(cleaned);
+                    setFieldError("");
+                  }
+                }}
+                placeholder="Nhập số tiền"
+              />
+              <p className="text-xs text-slate-500">Tối đa: {formatCurrency(maxPayable)}</p>
+              {fieldError && (
+                <div className="flex items-center gap-2 text-sm text-red-600">
+                  <AlertCircle className="h-4 w-4" />
+                  {fieldError}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditingPayment(null);
+                  setEditAmount("");
+                  setFieldError("");
+                  setMaxPayable(0);
+                }}
+                disabled={submitting}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!editingPayment) return;
+                  const parsedAmount = Number(editAmount);
+                  if (isNaN(parsedAmount) || parsedAmount < 0) {
+                    setFieldError("Vui lòng nhập số tiền hợp lệ");
+                    return;
+                  }
+                  if (maxPayable > 0 && parsedAmount > maxPayable) {
+                    setFieldError(`Số tiền tối đa là ${formatCurrency(maxPayable)}`);
+                    return;
+                  }
+                  const stt = (editingPayment as any).Stt ?? editingPayment.id;
+                  if (stt === undefined || stt === null) {
+                    setFieldError("Không xác định được bản ghi để cập nhật");
+                    return;
+                  }
+                  setSubmitting(true);
+                  setFieldError("");
+                  try {
+                    await updatePaymentHistory(stt, parsedAmount);
+                    setEditingPayment(null);
+                    setEditAmount("");
+                    setMaxPayable(0);
+                    setResultModal({
+                      type: "success",
+                      message: "Cập nhật số tiền đã trả thành công.",
+                    });
+                    onEditSuccess?.();
+                  } catch (error) {
+                    console.error("Failed to update payment", error);
+                    setResultModal({
+                      type: "error",
+                      message: "Có lỗi xảy ra khi cập nhật. Vui lòng thử lại.",
+                    });
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                disabled={submitting}
+                className="bg-green-500 hover:bg-green-600 text-white"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Lưu
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {resultModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => setResultModal(null)}
+          title={resultModal.type === "success" ? "Thành công" : "Thông báo lỗi"}
+          size="sm"
+        >
+          <div className="p-4 space-y-4">
+            <p className="text-sm text-slate-700">{resultModal.message}</p>
+            <div className="flex justify-end">
+              <Button onClick={() => setResultModal(null)}>Đóng</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
 

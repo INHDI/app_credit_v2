@@ -266,8 +266,8 @@ export default function GenericContractDetailModal({
                 <PaymentsList
                   contractStatus={contract.status}
                   items={paymentHistory as any}
-                  // onPayClick={(id, remain) => handlePayment(Number(id), remain)}
                   disablePayWhen={(p) => p.TrangThaiNgayThanhToan === 'Quá hạn' || p.TrangThaiNgayThanhToan === 'Quá kỳ đóng lãi'}
+                  onEditSuccess={handlePaymentSuccess}
                 />
               )}
             </div>

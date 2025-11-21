@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.schemas.lich_su_tra_lai import LichSuTraLai
 from app.schemas.response import ApiResponse
 from app.crud import lich_su_tra_lai as crud_lich_su
-from app.websocket import manager, EventType, broadcast_lich_su_tra_lai_event, broadcast_dashboard_update
+from app.websocket import broadcast_tin_chap_event, broadcast_tra_gop_event, manager, EventType, broadcast_lich_su_tra_lai_event, broadcast_dashboard_update
 
 router = APIRouter(
     prefix="/lich-su-tra-lai",
@@ -217,3 +217,33 @@ async def pay_full_lich_su(
     )
     
     return ApiResponse.success_response(data=result, message="Tất toán hợp đồng thành công")
+
+@router.put("/{stt}", response_model=ApiResponse[Any])
+async def update_lich_su(
+    stt: int,
+    tien_da_tra: int = 0,
+    db: Session = Depends(get_db),
+):
+    """Update a payment history record"""
+    result = crud_lich_su.update_lich_su(db=db, stt=stt, tien_da_tra=tien_da_tra)
+    if not result:
+        raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
+    
+    lich_su_response = LichSuTraLai.model_validate(result)
+    
+    # Broadcast WebSocket event - quan trọng cho real-time updates!
+    # await broadcast_tin_chap_event(
+    #     manager=manager,
+    #     event_type=EventType.LICH_SU_TRA_LAI_UPDATED,
+    #     lich_su_data={"stt": stt, "tien_da_tra": tien_da_tra, "result": result},
+    #     message=f"Cập nhật lịch sử trả lãi kỳ {stt} thành công"
+    # )
+    
+    # # Broadcast NoPhaiThu update event
+    # await broadcast_tra_gop_event(
+    #     manager=manager,
+    #     no_phai_thu_data={"stt": stt, "tien_da_tra": tien_da_tra},
+    #     message=f"Cập nhật lịch sử trả lãi kỳ {stt} thành công"
+    # )
+    
+    return ApiResponse.success_response(data=lich_su_response, message="Cập nhật lịch sử trả lãi thành công")
