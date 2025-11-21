@@ -103,7 +103,7 @@ export default function EditHDModal({
         details: `Mã hợp đồng: ${maHD}\nVui lòng chờ trong giây lát.`
       });
 
-      console.log(`Updating ${contractType} contract ${maHD}...`, data);
+      // console.log(`Updating ${contractType} contract ${maHD}...`, data);
       
       // Update contract and recreate payment history
       const { contractResponse, paymentResponse } = await updateContractWithPaymentHistory(
@@ -112,8 +112,8 @@ export default function EditHDModal({
         data
       );
 
-      console.log('Contract updated:', contractResponse.data);
-      console.log('Payment history recreated:', paymentResponse.data);
+      // console.log('Contract updated:', contractResponse.data);
+      // console.log('Payment history recreated:', paymentResponse.data);
 
       const recordsCreated = paymentResponse.data.records_created;
 

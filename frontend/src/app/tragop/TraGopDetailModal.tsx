@@ -5,7 +5,7 @@ import { getContractDetailConfig } from '@/config/contractDetailConfigs';
 import { ContractDetailType } from '@/types/contractDetail';
 import { ContractDetailData, PaymentHistoryItem } from '@/types/contractDetail';
 import type { CreditContract as TraGopContract } from '@/hooks/useTraGop';
-import { payInterestByRecord } from '@/services/paymentApi';
+import { payInterestByContract } from '@/services/paymentApi';
 import { useWebSocketEvents } from '@/hooks/useWebSocket';
 import { WebSocketEventType } from '@/types/websocket';
 // import { getTraLaiByContract, processPayment } from '@/apis/traLaiTraGop-api';
@@ -94,8 +94,8 @@ export default function TraGopDetailModal({
   };
 
   // Process payment for Tra Gop
-  const processTraGopPayment = async (paymentId: number, amount: number): Promise<void> => {
-    await payInterestByRecord(paymentId, amount);
+  const processTraGopPayment = async (maHD: string, amount: number): Promise<void> => {
+    await payInterestByContract(maHD, amount);
   };
 
   return (

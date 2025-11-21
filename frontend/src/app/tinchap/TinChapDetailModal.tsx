@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { CreditContract } from "@/hooks/useTinChap";
 // import { getTraLaiByContract } from '@/apis/traLaiTinChap-api';
 // import { TraLaiTinChapResponse } from '@/models/tinChap';
-import { payInterestByRecord } from '@/services/paymentApi';
+import { payInterestByContract } from '@/services/paymentApi';
 import { useWebSocketEvents } from '@/hooks/useWebSocket';
 import { WebSocketEventType } from '@/types/websocket';
 import GenericContractDetailModal from "@/components/ui/GenericContractDetailModal";
-import { ContractDetailData, ContractDetailType } from "@/types/contractDetail";
+import { ContractDetailData, ContractDetailType, PaymentHistoryItem } from "@/types/contractDetail";
 import { getContractDetailConfig } from "@/config/contractDetailConfigs";
 
 interface TinChapDetailModalProps {
@@ -68,7 +68,7 @@ export default function TinChapDetailModal({
         GocConLai: contract.GocConLai, 
       }
     : null;
-  // Load payment history for Tra Gop (prefer data from contract if available)
+  // Load payment history for Tin Chap (prefer data from contract if available)
   const loadPaymentHistory = async (maHopDong: string): Promise<PaymentHistoryItem[]> => {
     try {
       if (contract?.LichSuTraLai && Array.isArray(contract.LichSuTraLai)) {
@@ -89,14 +89,14 @@ export default function TinChapDetailModal({
       // TODO: fallback to API when needed
       return [];
     } catch (error) {
-      console.error('Error loading Tra Gop payment history:', error);
+      console.error('Error loading Tin Chap payment history:', error);
       return [];
     }
   };  
 
-  // Process payment for Tra Gop
-  const processTraGopPayment = async (paymentId: number, amount: number): Promise<void> => {
-    await payInterestByRecord(paymentId, amount);
+  // Process payment for Tin Chap
+  const processTinChapPayment = async (maHD: string, amount: number): Promise<void> => {
+    await payInterestByContract(maHD, amount);
   };
 
   return (
@@ -107,7 +107,7 @@ export default function TinChapDetailModal({
         onRefresh={onRefresh}
         config={config}
         onLoadPaymentHistory={loadPaymentHistory}
-        onProcessPayment={processTraGopPayment}
+        onProcessPayment={processTinChapPayment}
       />
     );
   }

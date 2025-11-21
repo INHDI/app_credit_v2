@@ -151,6 +151,34 @@ async def pay_lich_su(
     
     return ApiResponse.success_response(data=result, message="Thanh toán lịch sử trả lãi thành công")
 
+@router.post("/payHD/{ma_hd}", response_model=ApiResponse[Any])
+async def pay_lich_su_by_contract(
+    ma_hd: str,
+    so_tien: int,
+    db: Session = Depends(get_db)
+):
+    """Pay a payment history record"""
+    result = crud_lich_su.pay_lich_su_by_contract(db=db, ma_hd=ma_hd, so_tien=so_tien)
+    if not result:
+        raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi cho hợp đồng này")
+    
+    # Broadcast WebSocket event - quan trọng cho real-time updates!
+    await broadcast_lich_su_tra_lai_event(
+        manager=manager,
+        event_type=EventType.LICH_SU_TRA_LAI_UPDATED,
+        lich_su_data={"ma_hd": ma_hd, "so_tien": so_tien, "result": result},
+        message=f"Thanh toán {so_tien:,} VNĐ cho hợp đồng {ma_hd} thành công"
+    )
+    
+    # Also trigger dashboard update
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "payment", "ma_hd": ma_hd, "amount": so_tien},
+        message="Dashboard cần cập nhật sau thanh toán"
+    )
+    
+    return ApiResponse.success_response(data=result, message="Thanh toán lịch sử trả lãi thành công")
+
 @router.post("/auto-create-lich-su", response_model=ApiResponse[Any])
 async def auto_create_lich_su(db: Session = Depends(get_db)):
     """Auto create payment history records for all contracts"""

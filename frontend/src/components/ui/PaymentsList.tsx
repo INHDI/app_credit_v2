@@ -36,11 +36,11 @@ interface PaymentRecord {
 interface PaymentsListProps {
   contractStatus: string;
   items: PaymentRecord[];
-  onPayClick?: (id: number, remain: number) => void;
+  // onPayClick?: (id: number, remain: number) => void;
   disablePayWhen?: (record: PaymentRecord) => boolean;
 }
 
-export default function PaymentsList({ contractStatus, items, onPayClick, disablePayWhen }: PaymentsListProps) {
+export default function PaymentsList({ contractStatus, items, disablePayWhen }: PaymentsListProps) {
   
   const safeItems = Array.isArray(items) ? items : [];
   
@@ -106,7 +106,7 @@ export default function PaymentsList({ contractStatus, items, onPayClick, disabl
               <div className="flex items-center gap-2 self-end sm:self-auto">
                 <Badge className={`${payClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiThanhToan}</Badge>
                 <Badge className={`${dueClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiNgayThanhToan}</Badge>
-                {!contractStatus.includes("Đã tất toán") && onPayClick && !disablePay && isToday && (
+                {/* {!contractStatus.includes("Đã tất toán") && onPayClick && !disablePay && isToday && (
                   <Button
                     size="sm"
                     onClick={() => onPayClick(Number(id), remain)}
@@ -116,7 +116,7 @@ export default function PaymentsList({ contractStatus, items, onPayClick, disabl
                     <span className="hidden sm:inline">Thanh toán</span>
                     <span className="sm:hidden">Trả</span>
                   </Button>
-                )}
+                )} */}
               </div>
             </div>
           </div>

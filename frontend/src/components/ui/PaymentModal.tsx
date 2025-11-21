@@ -18,10 +18,10 @@ import {
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  paymentId: number;
+  paymentId: number|string;
   paymentAmount: number;
   onPaymentSuccess: () => void;
-  onProcessPayment?: (paymentId: number, amount: number) => Promise<void>;
+  onProcessPayment?: (paymentId: number|string, amount: number) => Promise<void>;
   tienCanThanhToanTheoKy: string | number;
 }
 

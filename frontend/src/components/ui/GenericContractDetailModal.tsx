@@ -30,7 +30,7 @@ interface GenericContractDetailModalProps {
   onRefresh?: () => void;
   config: ContractDetailConfig;
   onLoadPaymentHistory?: (maHopDong: string) => Promise<PaymentHistoryItem[]>;
-  onProcessPayment?: (paymentId: number, amount: number) => Promise<void>;
+  onProcessPayment?: (maHD: string, amount: number) => Promise<void>;
 }
 
 export default function GenericContractDetailModal({ 
@@ -46,8 +46,10 @@ export default function GenericContractDetailModal({
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<{id: number, amount: number} | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<{maHD: string, amount: number} | null>(null);
   const [principalModalOpen, setPrincipalModalOpen] = useState(false);
+  const [thanhToanLai, setThanhToanLai] = useState(false);
+  const [tongTienCanThanhToan, setTongTienCanThanhToan] = useState(0);
 
   // Fetch payment history when modal opens
   useEffect(() => {
@@ -56,6 +58,19 @@ export default function GenericContractDetailModal({
         setLoading(true);
         try {
           const data = await onLoadPaymentHistory(contract.ma_hop_dong);
+          // console.log('data', data)
+          setTongTienCanThanhToan(0);
+          if (data.length > 0) {
+            // if (contract.ma_hop_dong.includes('TC')) {
+            //   setTongTienCanThanhToan(Number(data[data.length - 1].so_tien_lai));
+            // } else {
+              // lấy ra tổng so_tien_lai với điều kiện TrangThaiNgayThanhToan = 'Đến hạn' và TrangThaiNgayThanhToan = 'Quá hạn'
+              // console.log('data', data)
+            const soTienCanThanhToan = data.filter((item: any) => item.TrangThaiNgayThanhToan === 'Đến hạn' || item.TrangThaiNgayThanhToan === 'Quá hạn').reduce((acc: number, item: any) => acc + Number(item.so_tien_lai - item.so_tien_tra), 0);
+            setTongTienCanThanhToan(soTienCanThanhToan);
+
+            // }
+          }
           setPaymentHistory(data);
         } catch (error) {
           console.error('Error loading payment history:', error);
@@ -69,8 +84,8 @@ export default function GenericContractDetailModal({
   }, [isOpen, contract?.ma_hop_dong, onLoadPaymentHistory]);
 
   // Function mở modal thanh toán
-  const handlePayment = (paymentId: number, paymentAmount: number) => {
-    setSelectedPayment({ id: paymentId, amount: paymentAmount });
+  const handlePayment = (maHD: string, paymentAmount: number) => {
+    setSelectedPayment({ maHD: maHD, amount: paymentAmount });
     setPaymentModalOpen(true);
   };
 
@@ -251,7 +266,7 @@ export default function GenericContractDetailModal({
                 <PaymentsList
                   contractStatus={contract.status}
                   items={paymentHistory as any}
-                  onPayClick={(id, remain) => handlePayment(Number(id), remain)}
+                  // onPayClick={(id, remain) => handlePayment(Number(id), remain)}
                   disablePayWhen={(p) => p.TrangThaiNgayThanhToan === 'Quá hạn' || p.TrangThaiNgayThanhToan === 'Quá kỳ đóng lãi'}
                 />
               )}
@@ -308,7 +323,7 @@ export default function GenericContractDetailModal({
       </div>
 
       {/* Tab Content - Responsive padding */}
-      <div className="p-3 sm:p-6 max-h-[60vh] sm:max-h-[80vh] overflow-y-auto">
+      <div className="p-3 sm:p-6 max-h-[60vh] sm:max-h-[80vh]">
         {renderTabContent()}
       </div>
 
@@ -321,13 +336,27 @@ export default function GenericContractDetailModal({
         >
           Đóng
         </Button>
-        {config.contractType === 'tin_chap' &&
-        <Button
-          onClick={() => setPrincipalModalOpen(true)}
-          className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg px-4 sm:px-8 text-sm flex-1 sm:flex-none"
-        >
-          Thanh toán gốc
-        </Button>}
+        {!contract.status.includes("Đã tất toán") && (
+          <>
+            {config.contractType === 'tin_chap' &&
+            <Button
+              onClick={() => setPrincipalModalOpen(true)}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg px-4 sm:px-8 text-sm flex-1 sm:flex-none"
+            >
+              Thanh toán gốc
+            </Button>}
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <Button
+                onClick={() => setThanhToanLai(true)}
+                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl shadow-md px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium flex-shrink-0 w-full sm:w-auto"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Thanh toán lãi
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       {contract && (
@@ -341,6 +370,19 @@ export default function GenericContractDetailModal({
             const maHD = (contract as any).MaHD || (contract as any).ma_hop_dong;
             await payPrincipalTinChap(maHD, amount);
           }}
+        />
+      )}
+
+      {contract && (
+        // console.log('thanhToanLai', paymentHistory as any)
+        <PaymentModal
+          isOpen={thanhToanLai}
+          onClose={() => setThanhToanLai(false)}
+          paymentId={(contract as any).MaHD || (contract as any).ma_hop_dong}
+          paymentAmount={tongTienCanThanhToan}
+          onPaymentSuccess={handlePaymentSuccess}
+          onProcessPayment={onProcessPayment}
+          tienCanThanhToanTheoKy={contract.so_ky_tra ? (Number(totalAmount) + Number(contract.lai_suat)) / Number(contract.so_ky_tra) : Number(contract.lai_suat)}
         />
       )}
 
