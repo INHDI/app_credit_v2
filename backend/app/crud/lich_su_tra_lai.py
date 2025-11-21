@@ -899,9 +899,10 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
         raise HTTPException(status_code=400, detail="Số tiền thanh toán phải > 0")
 
     db_lich_su = get_lich_sus_by_contract(db, ma_hd)
-    if not db_lich_su:
-        raise HTTPException(status_code=404, detail="Không tìm thấy bản ghi lịch sử")
-    data_db_lich_su = sorted([db_lich_su for db_lich_su in db_lich_su if db_lich_su.SoTien != db_lich_su.TienDaTra], key=lambda x: x.Ngay)
+    if len(db_lich_su) != 0:
+        data_db_lich_su = sorted([db_lich_su for db_lich_su in db_lich_su if db_lich_su.SoTien != db_lich_su.TienDaTra], key=lambda x: x.Ngay)
+    else:
+        data_db_lich_su = []
     so_tien_con_lai_de_phan_bo = so_tien
     tong_da_thanh_toan = 0
     is_first_period = True  
@@ -911,18 +912,18 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
         contract = db.query(TinChap).filter(TinChap.MaHD == ma_hd).first()
         if not contract:
             raise HTTPException(status_code=404, detail=f"Không tìm thấy hợp đồng {ma_hd}")
-
-        current_date = data_db_lich_su[0].Ngay
         ky_dong_days = contract.KyDong or 1
         daily_interest = contract.LaiSuat or 0
-        ky_so = 1  # Initialize period number
-        
+        ky_so = 1
 
-        # Cộng dồn nội dung cho bản ghi được chọn (STT)
-        if "Số tiền thanh toán" in data_db_lich_su[0].NoiDung:
-            data_db_lich_su[0].NoiDung += f" + {so_tien:,} VNĐ"
+        if len(data_db_lich_su) != 0:
+            current_date = data_db_lich_su[0].Ngay
+            if "Số tiền thanh toán" in data_db_lich_su[0].NoiDung:
+                data_db_lich_su[0].NoiDung += f" + {so_tien:,} VNĐ"
+            else:
+                data_db_lich_su[0].NoiDung += f" |Lãi đã được trả vào ngày {date.today().isoformat()} |Số tiền thanh toán: {so_tien:,} VNĐ"
         else:
-            data_db_lich_su[0].NoiDung += f" |Lãi đã được trả vào ngày {date.today().isoformat()} |Số tiền thanh toán: {so_tien:,} VNĐ"
+            current_date = contract.NgayVay + timedelta(days=ky_dong_days)
 
         while so_tien_con_lai_de_phan_bo > 0:
             # Tìm hoặc tạo bản ghi cho current_date
