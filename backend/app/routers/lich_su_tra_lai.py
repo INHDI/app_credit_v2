@@ -229,21 +229,4 @@ async def update_lich_su(
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
     
-    # lich_su_response = LichSuTraLai.model_validate(result)
-    
-    # Broadcast WebSocket event - quan trọng cho real-time updates!
-    # await broadcast_tin_chap_event(
-    #     manager=manager,
-    #     event_type=EventType.LICH_SU_TRA_LAI_UPDATED,
-    #     lich_su_data={"stt": stt, "tien_da_tra": tien_da_tra, "result": result},
-    #     message=f"Cập nhật lịch sử trả lãi kỳ {stt} thành công"
-    # )
-    
-    # # Broadcast NoPhaiThu update event
-    # await broadcast_tra_gop_event(
-    #     manager=manager,
-    #     no_phai_thu_data={"stt": stt, "tien_da_tra": tien_da_tra},
-    #     message=f"Cập nhật lịch sử trả lãi kỳ {stt} thành công"
-    # )
-    
     return ApiResponse.success_response(data=result, message="Cập nhật lịch sử trả lãi thành công")

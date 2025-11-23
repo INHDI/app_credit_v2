@@ -372,27 +372,28 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
         if not contract:
             raise HTTPException(status_code=404, detail=f"Không tìm thấy hợp đồng {ma_hd}")
         # Lấy LichSuTraLai của hợp đồng từ ngày hôm nay đến hết
-        lich_su_tra_lai = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.Ngay >= date.today()).all()
+        lich_su_tra_lai = sorted(db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.Ngay >= date.today()).all(), key=lambda x: x.Ngay)
         if len(lich_su_tra_lai) == 0:
             raise HTTPException(status_code=404, detail=f"Không tìm thấy lịch sử trả lãi của hợp đồng {ma_hd}")
         for ls in lich_su_tra_lai:
             ls.TienDaTra = 0
             ls.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
             ls.TrangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN.value
+            # ls.NoiDung = f""
             db.commit()
 
         for db_lich_su_cong_don_lai in lich_su_tra_lai:
             if so_tien_con_lai_de_phan_bo <= 0:
                 break
 
-            if "Số tiền thanh toán" in db_lich_su_cong_don_lai.NoiDung:
-                if date.today().isoformat() in db_lich_su_cong_don_lai.NoiDung:
-                    db_lich_su_cong_don_lai.NoiDung += f" + {tien_da_tra:,} VNĐ"
-                else:
-                    db_lich_su_cong_don_lai.NoiDung += f"| Số tiền thanh toán: {tien_da_tra:,} VNĐ"
-            else:
-                if is_first_period != False:
-                    db_lich_su_cong_don_lai.NoiDung += f"| Số tiền thanh toán: {tien_da_tra:,} VNĐ"
+            # if "Số tiền thanh toán" in db_lich_su_cong_don_lai.NoiDung:
+                # if date.today().isoformat() in db_lich_su_cong_don_lai.NoiDung:
+                #     db_lich_su_cong_don_lai.NoiDung += f" + {tien_da_tra:,} VNĐ"
+                # else:
+            
+            # else:
+            #     if is_first_period != False:
+            #         db_lich_su_cong_don_lai.NoiDung = f"| Số tiền thanh toán: {tien_da_tra:,} VNĐ"
 
             con_lai_ky = max(0, db_lich_su_cong_don_lai.SoTien - db_lich_su_cong_don_lai.TienDaTra)
             if con_lai_ky <= 0:
@@ -402,6 +403,7 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
             db_lich_su_cong_don_lai.TienDaTra += nop_vao_ky
             tong_da_thanh_toan += nop_vao_ky
             so_tien_con_lai_de_phan_bo -= nop_vao_ky
+            db_lich_su_cong_don_lai.NoiDung = f"Sửa số tiền thanh toán: {tien_da_tra:,} VNĐ"
 
             # Cập nhật trạng thái thanh toán kỳ
             if db_lich_su_cong_don_lai.TienDaTra >= db_lich_su_cong_don_lai.SoTien:
@@ -416,12 +418,12 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
             else:
                 # Các kỳ sau: cộng dồn nội dung thanh toán
                 noi_dung_lai = f"Lãi đã được trả vào ngày {date.today().isoformat()}"
-                if "Số tiền thanh toán" in db_lich_su_cong_don_lai.NoiDung:
+                # if "Số tiền thanh toán" in db_lich_su_cong_don_lai.NoiDung:
                     # Đã có ghi chú thanh toán trước đó, cộng dồn
-                    db_lich_su_cong_don_lai.NoiDung += f" + {nop_vao_ky:,} VNĐ"
-                else:
+                    # db_lich_su_cong_don_lai.NoiDung += f" + {nop_vao_ky:,} VNĐ"
+                # else:
                     # Chưa có ghi chú thanh toán, tạo mới
-                    db_lich_su_cong_don_lai.NoiDung += f" |{noi_dung_lai}"
+                db_lich_su_cong_don_lai.NoiDung = f" |{noi_dung_lai}"
         
 
 
@@ -438,7 +440,7 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
     )
 
     if exists_sua_so_tien:
-        exists_sua_so_tien.so_tien = -tien_da_tra
+        exists_sua_so_tien.so_tien = tien_da_tra
         db.commit()
     else: 
         if "TC" in ma_hd:

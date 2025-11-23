@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
-import { formatCurrency } from "@/utils/formatters";
 import { getDuePriority, getDueStatusClass, getPayStatusClass } from "@/utils/statusHelpers";
 import { updatePaymentHistory } from "@/services/paymentApi";
 
@@ -38,6 +37,7 @@ interface PaymentRecord {
 }
 
 interface PaymentsListProps {
+  contractId: string;
   contractStatus: string;
   items: PaymentRecord[];
   disablePayWhen?: (record: PaymentRecord) => boolean;
@@ -46,6 +46,7 @@ interface PaymentsListProps {
 }
 
 export default function PaymentsList({
+  contractId,
   contractStatus,
   items,
   disablePayWhen,
@@ -57,7 +58,6 @@ export default function PaymentsList({
   const [submitting, setSubmitting] = useState(false);
   const [fieldError, setFieldError] = useState<string>("");
   const [resultModal, setResultModal] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [maxPayable, setMaxPayable] = useState<number>(0);
 
   const safeItems = Array.isArray(items) ? items : [];
   
@@ -95,7 +95,9 @@ export default function PaymentsList({
 
         const displayId = idx + 1; // STT hiển thị bắt đầu từ 1
         const id = (payment as any).Stt ?? payment.id ?? idx; // ID thực để gửi data
-        const dateStr = new Date(payment.Ngay || (payment as any).ngay_tra_lai).toLocaleDateString('vi-VN');
+        const paymentDate = new Date(payment.Ngay || (payment as any).ngay_tra_lai);
+        const dateStr = paymentDate.toLocaleDateString('vi-VN');
+        const isToday = paymentDate.toDateString() === new Date().toDateString();
         
         return (
           <div key={`payments-list-${id}`} className="bg-white rounded-lg p-3 sm:p-4 border border-slate-200">
@@ -109,7 +111,6 @@ export default function PaymentsList({
                   <div className="text-xs sm:text-sm text-slate-600 space-y-1">
                     {formatPaymentContent(payment.NoiDung || payment.ghi_chu || '')}
                   </div>
-                  {/* <p className="text-xs sm:text-sm text-slate-500 truncate">Số tiền: {formatCurrency(Number(soTien))} | Đã trả: {formatCurrency(Number(daTra))}</p> */}
                 </div>
               </div>
               <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -125,7 +126,7 @@ export default function PaymentsList({
                     Thanh toán
                   </Button>
                 )}
-                {!contractStatus.includes("Đã tất toán") && (
+                {!contractStatus.includes("Đã tất toán") && isToday && (
                   <Button
                     size="sm"
                     className="bg-green-500 hover:bg-green-600 text-white rounded-lg px-2 sm:px-3 py-1 text-xs flex-shrink-0"
@@ -133,8 +134,6 @@ export default function PaymentsList({
                       const currentPaid = Number((payment as any).TienDaTra ?? payment.so_tien_tra ?? 0);
                       setEditAmount(String(currentPaid));
                       setFieldError("");
-                      const totalDue = Number((payment as any).SoTien ?? payment.so_tien_lai ?? 0);
-                      setMaxPayable(totalDue);
                       setEditingPayment(payment);
                     }}
                   >
@@ -157,7 +156,6 @@ export default function PaymentsList({
             setEditingPayment(null);
             setEditAmount("");
             setFieldError("");
-            setMaxPayable(0);
           }}
           title="Chỉnh sửa số tiền đã trả"
           size="sm"
@@ -180,18 +178,11 @@ export default function PaymentsList({
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
                   const raw = e.target.value;
                   const cleaned = raw.replace(/[^0-9]/g, "");
-                  const numeric = Number(cleaned);
-                  if (maxPayable > 0 && numeric > maxPayable) {
-                    setEditAmount(String(maxPayable));
-                    setFieldError(`Số tiền tối đa là ${formatCurrency(maxPayable)}`);
-                  } else {
-                    setEditAmount(cleaned);
-                    setFieldError("");
-                  }
+                  setEditAmount(cleaned);
+                  setFieldError("");
                 }}
                 placeholder="Nhập số tiền"
               />
-              <p className="text-xs text-slate-500">Tối đa: {formatCurrency(maxPayable)}</p>
               {fieldError && (
                 <div className="flex items-center gap-2 text-sm text-red-600">
                   <AlertCircle className="h-4 w-4" />
@@ -206,7 +197,6 @@ export default function PaymentsList({
                   setEditingPayment(null);
                   setEditAmount("");
                   setFieldError("");
-                  setMaxPayable(0);
                 }}
                 disabled={submitting}
               >
@@ -220,22 +210,16 @@ export default function PaymentsList({
                     setFieldError("Vui lòng nhập số tiền hợp lệ");
                     return;
                   }
-                  if (maxPayable > 0 && parsedAmount > maxPayable) {
-                    setFieldError(`Số tiền tối đa là ${formatCurrency(maxPayable)}`);
-                    return;
-                  }
-                  const stt = (editingPayment as any).Stt ?? editingPayment.id;
-                  if (stt === undefined || stt === null) {
-                    setFieldError("Không xác định được bản ghi để cập nhật");
+                  if (!contractId) {
+                    setFieldError("Không xác định được hợp đồng để cập nhật");
                     return;
                   }
                   setSubmitting(true);
                   setFieldError("");
                   try {
-                    await updatePaymentHistory(stt, parsedAmount);
+                    await updatePaymentHistory(contractId, parsedAmount);
                     setEditingPayment(null);
                     setEditAmount("");
-                    setMaxPayable(0);
                     setResultModal({
                       type: "success",
                       message: "Cập nhật số tiền đã trả thành công.",

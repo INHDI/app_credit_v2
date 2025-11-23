@@ -56,6 +56,7 @@ export default function NoPhaiThuDetailModal({ isOpen, onClose, contract, onRefr
               <span className="truncate">Lịch sử trả lãi nợ phải thu</span>
             </h4>
             <PaymentsList 
+              contractId={contract.ma_hop_dong}
               contractStatus={contract.raw?.TrangThai || ''}
               items={items}
               onPayClick={(id, remain) => handleOpenPayment(Number(id), remain)}

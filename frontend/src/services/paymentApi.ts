@@ -59,12 +59,12 @@ export async function payPrincipalTinChap(maHD: string, amount: number): Promise
   return await resp.json();
 }
 
-// PUT /lich-su-tra-lai/{stt}?tien_da_tra={amount}
+// PUT /lich-su-tra-lai/{maHD}?tien_da_tra={amount}
 export async function updatePaymentHistory(
-  stt: number | string,
+  maHD: string,
   tienDaTra: number
 ): Promise<BasicApiResponse> {
-  const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/${stt}?tien_da_tra=${tienDaTra}`;
+  const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/${maHD}?tien_da_tra=${tienDaTra}`;
   const resp = await fetch(url, {
     method: 'PUT',
     headers: API_HEADERS.JSON_ACCEPT,

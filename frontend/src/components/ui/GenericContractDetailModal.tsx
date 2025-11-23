@@ -264,6 +264,7 @@ export default function GenericContractDetailModal({
                 </div>
               ) : (
                 <PaymentsList
+                  contractId={contract.ma_hop_dong}
                   contractStatus={contract.status}
                   items={paymentHistory as any}
                   disablePayWhen={(p) => p.TrangThaiNgayThanhToan === 'Quá hạn' || p.TrangThaiNgayThanhToan === 'Quá kỳ đóng lãi'}
