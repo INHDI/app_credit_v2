@@ -150,6 +150,41 @@ export const updateTraGopContract = async (maHD: string, data: any): Promise<Con
   return await response.json();
 };
 
+// PUT only HoTen for both contract types (used when payments already exist)
+export const updateContractCustomerName = async (
+  contractType: 'tin-chap' | 'tra-gop',
+  maHD: string,
+  hoTen: string
+): Promise<ContractCreateResponse> => {
+  const endpoint =
+    contractType === 'tin-chap'
+      ? API_CONFIG.ENDPOINTS.TIN_CHAP
+      : API_CONFIG.ENDPOINTS.TRA_GOP;
+
+  const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${endpoint}/${maHD}`, {
+    method: 'PUT',
+    headers: API_HEADERS.JSON,
+    body: JSON.stringify({ HoTen: hoTen })
+  });
+
+  if (!response.ok) {
+    let errorMessage = `HTTP error! status: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage =
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.error?.detail ||
+        errorMessage;
+    } catch (_) {
+      // ignore body parse errors and fall back to default message
+    }
+    throw new Error(errorMessage);
+  }
+
+  return await response.json();
+};
+
 // Delete payment history by contract
 export const deleteLichSuByContract = async (maHD: string): Promise<any> => {
   const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/contract/update/${maHD}`, {

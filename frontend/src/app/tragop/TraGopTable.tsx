@@ -190,7 +190,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                         <TooltipContent>
                           <p>Chỉnh sửa hợp đồng</p>
                           {(contract.DaThanhToan > 0 || parseFloat(contract.tien_da_tra || '0') > 0) && (
-                            <p className="text-xs text-amber-400 mt-1">⚠️ Có thanh toán - không thể sửa</p>
+                            <p className="text-xs text-amber-500 mt-1">⚠️ Đã có thanh toán - chỉ được sửa tên khách hàng</p>
                           )}
                         </TooltipContent>
                       </Tooltip>
@@ -314,9 +314,9 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Chỉnh sửa hợp đồng</p>
-                      {(contract.DaThanhToan > 0 || parseFloat(contract.tien_da_tra || '0') > 0) && (
-                        <p className="text-xs text-amber-400 mt-1">⚠️ Có thanh toán - không thể sửa</p>
-                      )}
+                    {(contract.DaThanhToan > 0 || parseFloat(contract.tien_da_tra || '0') > 0) && (
+                      <p className="text-xs text-amber-500 mt-1">⚠️ Đã có thanh toán - chỉ được sửa tên khách hàng</p>
+                    )}
                     </TooltipContent>
                   </Tooltip>
                   <Tooltip>

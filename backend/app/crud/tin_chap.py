@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from datetime import date
+from fastapi import HTTPException
 
 from app.models.tin_chap import TinChap
 from app.models.lich_su_tra_lai import LichSuTraLai
@@ -263,13 +264,30 @@ def update_tin_chap(db: Session, ma_hd: str, tin_chap_update: TinChapUpdate) -> 
             return None
         
         update_data = tin_chap_update.model_dump(exclude_unset=True)
+
+        if not update_data:
+            return db_tin_chap
+
+        has_interest_payment = (
+            db.query(LichSuTraLai)
+            .filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.TienDaTra > 0)
+            .first()
+            is not None
+        )
+        has_principal_payment = (db_tin_chap.SoTienTraGoc or 0) > 0
+        if (has_interest_payment or has_principal_payment) and any(
+            key != "HoTen" for key in update_data.keys()
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Hợp đồng đã có thanh toán, chỉ được phép cập nhật Họ tên khách hàng.",
+            )
+
+        for key, value in update_data.items():
+            setattr(db_tin_chap, key, value)
         
-        if update_data:
-            for key, value in update_data.items():
-                setattr(db_tin_chap, key, value)
-            
-            db.commit()
-            db.refresh(db_tin_chap)
+        db.commit()
+        db.refresh(db_tin_chap)
         
         # create_lich_su(db, 
         #     ma_hd=ma_hd, 

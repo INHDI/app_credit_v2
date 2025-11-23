@@ -166,7 +166,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                       <TooltipContent>
                         <p>Chỉnh sửa hợp đồng</p>
                         {(contract.LaiDaTra > 0 || contract.SoTienTraGoc > 0) && (
-                          <p className="text-xs text-amber-400 mt-1">⚠️ Có thanh toán - không thể sửa</p>
+                          <p className="text-xs text-amber-500 mt-1">⚠️ Đã có thanh toán - chỉ được sửa tên khách hàng</p>
                         )}
                       </TooltipContent>
                     </Tooltip>
@@ -286,7 +286,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                   <TooltipContent>
                     <p>Chỉnh sửa hợp đồng</p>
                     {(contract.LaiDaTra > 0 || contract.SoTienTraGoc > 0) && (
-                      <p className="text-xs text-amber-400 mt-1">⚠️ Có thanh toán - không thể sửa</p>
+                      <p className="text-xs text-amber-500 mt-1">⚠️ Đã có thanh toán - chỉ được sửa tên khách hàng</p>
                     )}
                   </TooltipContent>
                 </Tooltip>

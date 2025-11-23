@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional
 from datetime import date
+from fastapi import HTTPException
 
 from app.core.enums import TrangThaiThanhToan
 from app.models.tra_gop import TraGop
@@ -191,6 +192,30 @@ def update_tra_gop(db: Session, ma_hd: str, tra_gop_update: TraGopUpdate) -> Opt
         Updated TraGop object or None if not found
     """
     db_tra_gop = get_tra_gop(db, ma_hd)
+    if not db_tra_gop:
+        return None
+    
+    update_data = tra_gop_update.model_dump(exclude_unset=True)
+    if not update_data:
+        return db_tra_gop
+
+    has_payment = (
+        db.query(LichSuTraLai)
+        .filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.TienDaTra > 0)
+        .first()
+        is not None
+    )
+    if has_payment and any(key != "HoTen" for key in update_data.keys()):
+        raise HTTPException(
+            status_code=400,
+            detail="Hợp đồng trả góp đã có thanh toán, chỉ được phép cập nhật Họ tên khách hàng.",
+        )
+
+    for key, value in update_data.items():
+        setattr(db_tra_gop, key, value)
+    
+    db.commit()
+    db.refresh(db_tra_gop)
 
     create_lich_su(db, 
         ma_hd=ma_hd, 
@@ -199,15 +224,6 @@ def update_tra_gop(db: Session, ma_hd: str, tra_gop_update: TraGopUpdate) -> Opt
         so_tien=db_tra_gop.SoTienVay, 
         hanh_dong="Cập nhật hợp đồng trả góp", 
         loai_hop_dong="TG")
-    if not db_tra_gop:
-        return None
-    
-    update_data = tra_gop_update.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_tra_gop, key, value)
-    
-    db.commit()
-    db.refresh(db_tra_gop)
     
     return db_tra_gop
 

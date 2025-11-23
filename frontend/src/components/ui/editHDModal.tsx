@@ -6,7 +6,7 @@ import EditContractStatusModal from '@/components/ui/EditContractStatusModal';
 import { getContractConfig } from '@/config/contractConfigs';
 import { ContractType } from '@/types/contract';
 import { TinChapFormData, TraGopFormData } from '@/types/contract';
-import { updateContractWithPaymentHistory } from '@/services/contractApi';
+import { updateContractWithPaymentHistory, updateContractCustomerName } from '@/services/contractApi';
 
 interface EditHDModalProps {
   isOpen: boolean;
@@ -43,6 +43,31 @@ export default function EditHDModal({
     details: undefined
   });
 
+  // Helper to detect whether contract already has any payment
+  const hasPaymentHistory = useMemo(() => {
+    if (!contract) return false;
+    const normalizeNumber = (value: unknown) => {
+      if (typeof value === "number") return value;
+      if (typeof value === "string") return parseFloat(value) || 0;
+      return 0;
+    };
+    const interestPaid =
+      normalizeNumber(contract.LaiDaTra) ||
+      normalizeNumber((contract as any).DaThanhToan) ||
+      normalizeNumber((contract as any).tien_da_tra);
+    const principalPaid =
+      normalizeNumber(contract.SoTienTraGoc) ||
+      normalizeNumber((contract as any).so_tien_tra_goc);
+    const historyPaid =
+      Array.isArray(contract.LichSuTraLai) &&
+      contract.LichSuTraLai.some(
+        (ls: any) => normalizeNumber(ls?.TienDaTra ?? ls?.so_tien_tra) > 0
+      );
+    return interestPaid > 0 || principalPaid > 0 || historyPaid;
+  }, [contract]);
+
+  const maHD = contract?.MaHD || (contract as any)?.ma_hop_dong || "";
+
   // Get the appropriate config based on contract type
   const config = getContractConfig(
     contractType === 'tin-chap' ? ContractType.TIN_CHAP : ContractType.TRA_GOP
@@ -74,10 +99,17 @@ export default function EditHDModal({
       disabled: true, // Read-only field
     };
     
+    const lockedFields = [maHDField, ...config.fields].map((field) => {
+      if (hasPaymentHistory && !['ho_ten', 'ma_hd'].includes(field.key)) {
+        return { ...field, disabled: true };
+      }
+      return field;
+    });
+
     return {
       ...config,
       title: contractType === 'tin-chap' ? 'Chỉnh sửa hợp đồng tín chấp' : 'Chỉnh sửa hợp đồng trả góp',
-      fields: [maHDField, ...config.fields],
+      fields: lockedFields,
       defaultValues: {
         ma_hd: contract.MaHD || '',
         ho_ten: contract.HoTen || '',
@@ -88,42 +120,49 @@ export default function EditHDModal({
         so_lan_tra: contract.SoLanTra || 0, // Only for TraGop
       }
     };
-  }, [contract, config, contractType]);
+  }, [contract, config, contractType, hasPaymentHistory]);
 
   // Handle save with API calls
   const handleSave = async (data: TinChapFormData | TraGopFormData) => {
-    const maHD = contract.MaHD;
+    if (!contract || !maHD) {
+      return;
+    }
+    const renameOnly = hasPaymentHistory;
     
     try {
-      // Show loading status modal
+      const pendingMessage = renameOnly
+        ? 'Đang cập nhật tên khách hàng...'
+        : 'Đang cập nhật hợp đồng...';
       setStatusModal({
         isOpen: true,
         status: 'loading',
-        message: 'Đang cập nhật hợp đồng...',
+        message: pendingMessage,
         details: `Mã hợp đồng: ${maHD}\nVui lòng chờ trong giây lát.`
       });
-
-      // console.log(`Updating ${contractType} contract ${maHD}...`, data);
       
-      // Update contract and recreate payment history
-      const { contractResponse, paymentResponse } = await updateContractWithPaymentHistory(
-        contractType,
-        maHD,
-        data
-      );
-
-      // console.log('Contract updated:', contractResponse.data);
-      // console.log('Payment history recreated:', paymentResponse.data);
-
-      const recordsCreated = paymentResponse.data.records_created;
-
-      // Show success status modal
-      setStatusModal({
-        isOpen: true,
-        status: 'success',
-        message: 'Cập nhật hợp đồng thành công!',
-        details: `Mã hợp đồng: ${maHD}\nĐã tạo ${recordsCreated} kỳ thanh toán mới\n\nHợp đồng ${contractType === 'tin-chap' ? 'tín chấp' : 'trả góp'} đã được cập nhật và lịch thanh toán đã được làm mới.`
-      });
+      if (renameOnly) {
+        const newName = (data as TinChapFormData).ho_ten;
+        await updateContractCustomerName(contractType, maHD, newName);
+        setStatusModal({
+          isOpen: true,
+          status: 'success',
+          message: 'Cập nhật tên khách hàng thành công!',
+          details: `Mã hợp đồng: ${maHD}\nTên mới: ${newName}`
+        });
+      } else {
+        const { paymentResponse } = await updateContractWithPaymentHistory(
+          contractType,
+          maHD,
+          data
+        );
+        const recordsCreated = paymentResponse.data.records_created;
+        setStatusModal({
+          isOpen: true,
+          status: 'success',
+          message: 'Cập nhật hợp đồng thành công!',
+          details: `Mã hợp đồng: ${maHD}\nĐã tạo ${recordsCreated} kỳ thanh toán mới\n\nHợp đồng ${contractType === 'tin-chap' ? 'tín chấp' : 'trả góp'} đã được cập nhật và lịch thanh toán đã được làm mới.`
+        });
+      }
       
       // Đóng edit modal ngay
       onClose();
@@ -147,8 +186,7 @@ export default function EditHDModal({
       // Display detailed error message
       const errorMessage = err.message || `Có lỗi xảy ra khi cập nhật hợp đồng ${contractType === 'tin-chap' ? 'tín chấp' : 'trả góp'}`;
       
-      // Check if error is about payment history
-      if (errorMessage.includes('thanh toán') || errorMessage.includes('VNĐ')) {
+      if (!hasPaymentHistory && (errorMessage.includes('thanh toán') || errorMessage.includes('VNĐ'))) {
         setStatusModal({
           isOpen: true,
           status: 'error',
@@ -159,7 +197,7 @@ export default function EditHDModal({
         setStatusModal({
           isOpen: true,
           status: 'error',
-          message: 'Lỗi cập nhật hợp đồng!',
+          message: renameOnly ? 'Không thể cập nhật tên khách hàng!' : 'Lỗi cập nhật hợp đồng!',
           details: errorMessage
         });
       }
