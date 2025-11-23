@@ -109,7 +109,7 @@ export default function PaymentsList({
                   <div className="text-xs sm:text-sm text-slate-600 space-y-1">
                     {formatPaymentContent(payment.NoiDung || payment.ghi_chu || '')}
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-500 truncate">Số tiền: {formatCurrency(Number(soTien))} | Đã trả: {formatCurrency(Number(daTra))}</p>
+                  {/* <p className="text-xs sm:text-sm text-slate-500 truncate">Số tiền: {formatCurrency(Number(soTien))} | Đã trả: {formatCurrency(Number(daTra))}</p> */}
                 </div>
               </div>
               <div className="flex items-center gap-2 self-end sm:self-auto">

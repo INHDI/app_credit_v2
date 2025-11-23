@@ -218,18 +218,18 @@ async def pay_full_lich_su(
     
     return ApiResponse.success_response(data=result, message="Tất toán hợp đồng thành công")
 
-@router.put("/{stt}", response_model=ApiResponse[Any])
+@router.put("/{ma_hd}", response_model=ApiResponse[Any])
 async def update_lich_su(
-    stt: int,
+    ma_hd: str,
     tien_da_tra: int = 0,
     db: Session = Depends(get_db),
 ):
     """Update a payment history record"""
-    result = crud_lich_su.update_lich_su(db=db, stt=stt, tien_da_tra=tien_da_tra)
+    result = crud_lich_su.update_lich_su(db=db, ma_hd=ma_hd, tien_da_tra=tien_da_tra)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
     
-    lich_su_response = LichSuTraLai.model_validate(result)
+    # lich_su_response = LichSuTraLai.model_validate(result)
     
     # Broadcast WebSocket event - quan trọng cho real-time updates!
     # await broadcast_tin_chap_event(
@@ -246,4 +246,4 @@ async def update_lich_su(
     #     message=f"Cập nhật lịch sử trả lãi kỳ {stt} thành công"
     # )
     
-    return ApiResponse.success_response(data=lich_su_response, message="Cập nhật lịch sử trả lãi thành công")
+    return ApiResponse.success_response(data=result, message="Cập nhật lịch sử trả lãi thành công")
