@@ -116,7 +116,7 @@ export default function PaymentsList({
               <div className="flex items-center gap-2 self-end sm:self-auto">
                 <Badge className={`${payClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiThanhToan}</Badge>
                 <Badge className={`${dueClass} border-0 font-medium px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm flex-shrink-0`}>{payment.TrangThaiNgayThanhToan}</Badge>
-                {onPayClick && !contractStatus.includes("Đã tất toán") && !disablePay && (
+                {/* {onPayClick && !contractStatus.includes("Đã tất toán") && !disablePay && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -125,7 +125,7 @@ export default function PaymentsList({
                   >
                     Thanh toán
                   </Button>
-                )}
+                )} */}
                 {!contractStatus.includes("Đã tất toán") && isToday && (
                   <Button
                     size="sm"

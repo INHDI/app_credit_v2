@@ -85,7 +85,7 @@ export default function EditHDModal({
         ngayVay = contract.NgayVay;
       } else if (typeof contract.NgayVay === 'string') {
         // Handle YYYY-MM-DD format from backend
-        ngayVay = new Date(contract.NgayVay + 'T00:00:00');
+        ngayVay = new Date(contract.NgayVay);
       }
     }
     

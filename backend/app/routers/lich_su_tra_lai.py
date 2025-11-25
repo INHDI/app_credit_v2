@@ -108,7 +108,11 @@ async def update_lich_su_by_contract(ma_hd: str, db: Session = Depends(get_db)):
     """Delete all payment history records for a specific contract"""
     so_ban_ghi_da_xoa = crud_lich_su.update_lich_sus_by_contract(db=db, ma_hd=ma_hd)
     if so_ban_ghi_da_xoa == 0:
-        raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi cho hợp đồng này")
+        # raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi cho hợp đồng này")
+        return ApiResponse.success_response(
+            data={"MaHD": ma_hd, "records_deleted": so_ban_ghi_da_xoa}, 
+            message=f"Cập nhật lịch sử trả lãi cho hợp đồng {ma_hd} thành công"
+            )
     
     # Broadcast WebSocket event
     await broadcast_lich_su_tra_lai_event(

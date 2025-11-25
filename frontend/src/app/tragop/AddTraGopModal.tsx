@@ -42,8 +42,8 @@ export default function AddTraGopModal({
       // Create contract and payment history in one call
       const { contractResponse, paymentResponse } = await createContractWithPaymentHistory('tra-gop', data);
 
-      console.log('Tra Gop contract created:', contractResponse.data);
-      console.log('Payment history created:', paymentResponse.data);
+      // console.log('Tra Gop contract created:', contractResponse.data);
+      // console.log('Payment history created:', paymentResponse.data);
 
       const maHD = contractResponse.data.MaHD;
       const recordsCreated = paymentResponse.data.records_created;

@@ -42,8 +42,8 @@ export default function AddTinChapModal({
       // Create contract and payment history in one call
       const { contractResponse, paymentResponse } = await createContractWithPaymentHistory('tin-chap', data);
 
-      console.log('Tin Chap contract created:', contractResponse.data);
-      console.log('Payment history created:', paymentResponse.data);
+      // console.log('Tin Chap contract created:', contractResponse.data);
+      // console.log('Payment history created:', paymentResponse.data);
 
       const maHD = contractResponse.data.MaHD;
       const recordsCreated = paymentResponse.data.records_created;
