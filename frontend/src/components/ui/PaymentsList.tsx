@@ -126,7 +126,7 @@ export default function PaymentsList({
                     Thanh toán
                   </Button>
                 )} */}
-                {!contractStatus.includes("Đã tất toán") && isToday && (
+                {!contractStatus.includes("Đã tất toán") && payment.TrangThaiNgayThanhToan?.includes("Đến hạn") && (
                   <Button
                     size="sm"
                     className="bg-green-500 hover:bg-green-600 text-white rounded-lg px-2 sm:px-3 py-1 text-xs flex-shrink-0"
