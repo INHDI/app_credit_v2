@@ -35,6 +35,39 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
   const [showEdit, setShowEdit] = useState(false);
   const [selectedForEdit, setSelectedForEdit] = useState<CreditContract | null>(null);
 
+  const isContractSettled = (contract: CreditContract) => {
+    const status = (contract.TrangThai || contract.status || "").toLowerCase();
+    return status.includes("tất toán");
+  };
+
+  const getContractDateValue = (contract: CreditContract) => {
+    const rawDate =
+      contract.NgayVay ||
+      (contract as { ngay_vay?: string }).ngay_vay ||
+      (contract as { created_at?: string }).created_at ||
+      (contract as { updated_at?: string }).updated_at ||
+      "";
+    const timestamp = rawDate ? Date.parse(rawDate) : NaN;
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  };
+
+  const sortedContracts = useMemo(() => {
+    return [...contracts].sort((a, b) => {
+      const aSettled = isContractSettled(a);
+      const bSettled = isContractSettled(b);
+      if (aSettled !== bSettled) {
+        return aSettled ? 1 : -1;
+      }
+
+      const dateA = getContractDateValue(a);
+      const dateB = getContractDateValue(b);
+      if (dateA === dateB) {
+        return 0;
+      }
+      return dateB - dateA;
+    });
+  }, [contracts]);
+
   const handleOpenPaymentSchedule = (contract: CreditContract) => {
     setSelectedContract(contract);
     setShowPaymentSchedule(true);
@@ -96,7 +129,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
               </tr>
             </thead>
             <tbody>
-              {contracts.map((contract, index) => (
+              {sortedContracts.map((contract, index) => (
                 <tr key={`tragop-table-${instanceId}-${startIndex}-${index}-${contract.MaHD || contract.id}`} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-slate-50/50 hover:to-blue-50/30 transition-all duration-200">
                   <td className="p-4 text-slate-600 font-medium">{startIndex + index + 1}</td>
                   <td className="p-4">
@@ -238,7 +271,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
         </div>
         {/* Mobile/Card view */}
         <div className="space-y-3 md:hidden">
-          {contracts.map((contract, index) => (
+          {sortedContracts.map((contract, index) => (
             <div key={`tragop-mobile-${instanceId}-${startIndex}-${index}-${contract.MaHD || contract.id}`} className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
