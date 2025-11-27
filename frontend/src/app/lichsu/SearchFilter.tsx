@@ -35,11 +35,11 @@ export default function SearchFilter({
           )}
         </div>
       </div>
-      {searchTerm && (
+      {/* {searchTerm && (
         <div className="mt-2 text-sm text-slate-600">
           Đang tìm kiếm: <span className="font-semibold text-blue-600">"{searchTerm}"</span>
         </div>
-      )}
+      )} */}
     </div>
   );
 }
