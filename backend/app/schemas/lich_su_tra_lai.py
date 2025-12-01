@@ -43,5 +43,7 @@ class LichSuTraLai(BaseModel):
     TrangThaiThanhToan: str = Field(..., description="Trạng thái thanh toán")
     TrangThaiNgayThanhToan: str = Field(..., description="Trạng thái ngày thanh toán")
     TienDaTra: int = Field(..., description="Tổng tiền đã trả")
+    ThanhToan: Optional[bool] = Field(None, description="Trạng thái thanh toán (True/False)")
+    SuaLichSu: Optional[bool] = Field(None, description="Trạng thái sửa lịch sử (True/False)")
     
     model_config = ConfigDict(from_attributes=True)

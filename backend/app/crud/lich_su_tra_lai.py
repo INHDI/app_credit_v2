@@ -224,7 +224,8 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
                 NoiDung=f"Trả lãi kỳ {ky['ky_thu']}",
                 TrangThaiThanhToan=TrangThaiThanhToan.CHUA_THANH_TOAN.value,
                 TrangThaiNgayThanhToan=trang_thai_ngay,
-                TienDaTra=0
+                TienDaTra=0,
+                ThanhToan=False
             )
             db.add(db_lich_su)
         # 8. Commit vào database
@@ -306,7 +307,6 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
     is_first_period = True  
 
     if "TC" in ma_hd:
-
         contract = db.query(TinChap).filter(TinChap.MaHD == ma_hd).first()
         if not contract:
             raise HTTPException(status_code=404, detail=f"Không tìm thấy hợp đồng {ma_hd}")
@@ -322,9 +322,9 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
         noi_dung_last_period = last_period.NoiDung if last_period else None
         if last_period:
             if "cộng dồn" in last_period.NoiDung:
-                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split(" ")[0])
+                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split(" ")[0])+1
             else:
-                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split("|")[0])
+                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split("|")[0])+1
         else:
             ky_so = 1
         # Xóa lịch sử của hợp đồng từ ngày hôm nay đến hết
@@ -341,7 +341,7 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
             if not period:
                 if is_first_period:
                     # Kỳ đầu tiên: ghi tổng số tiền thanh toán
-                    noi_dung = f"{get_prefix_noi_dung(noi_dung_last_period, ky_so + 1)} |Sửa số tiền thanh toán: {tien_da_tra:,} VNĐ"
+                    noi_dung = f"{get_prefix_noi_dung(noi_dung_last_period, ky_so)} |Sửa số tiền thanh toán: {tien_da_tra:,} VNĐ"
                     period = LichSuTraLai(
                         MaHD=ma_hd,
                         Ngay=current_date,
@@ -358,6 +358,8 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
                             )
                         ),
                         TienDaTra=0,
+                        ThanhToan=True,
+                        SuaLichSu=True
                     )
                 else:
                     # Các kỳ sau: chỉ ghi lãi đã được trả
@@ -377,6 +379,8 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
                             )
                         ),
                         TienDaTra=0,
+                        ThanhToan=False,
+                        SuaLichSu=False
                     )
                 db.add(period)
             
@@ -392,6 +396,8 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
                     if period.TienDaTra >= period.SoTien
                     else TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
                 )
+                period.ThanhToan = True
+                period.SuaLichSu = True
                 
                 if not is_first_period:
                     # Các kỳ sau: cộng dồn nội dung thanh toán
@@ -401,7 +407,8 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
                     # else:
                         # Chưa có ghi chú thanh toán, tạo mới
                     period.NoiDung = f"Trả lãi kỳ {ky_so} |Lãi đã được trả vào ngày {date.today().isoformat()}"
-                
+                    period.ThanhToan = False
+                    period.SuaLichSu = False
 
             # Nếu kỳ đã đóng đủ thì tiến sang ngày kế tiếp theo KyDong
             if period.TienDaTra >= period.SoTien or con_lai_ky == 0:
@@ -428,9 +435,9 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
         noi_dung_last_period = last_period.NoiDung if last_period else None
         if last_period:
             if "cộng dồn" in last_period.NoiDung:
-                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split(" ")[0])
+                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split(" ")[0]) +1
             else:
-                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split("|")[0])
+                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split("|")[0]) +1
         else:
             ky_so = 1
         # Lấy LichSuTraLai của hợp đồng từ ngày hôm nay đến hết
@@ -439,8 +446,16 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
             raise HTTPException(status_code=404, detail=f"Không tìm thấy lịch sử trả lãi của hợp đồng {ma_hd}")
         for ls in lich_su_tra_lai:
             ls.TienDaTra = 0
-            ls.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
-            ls.TrangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN.value
+            if ls.Ngay == date.today():
+                ls.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.DEN_HAN.value
+                ls.TrangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN.value
+                ls.ThanhToan = True
+                ls.SuaLichSu = True
+            else:
+                ls.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
+                ls.TrangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN.value
+                ls.ThanhToan = False
+                ls.SuaLichSu = False
             # ls.NoiDung = f""
             db.commit()
 
@@ -465,7 +480,7 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
             db_lich_su_cong_don_lai.TienDaTra += nop_vao_ky
             tong_da_thanh_toan += nop_vao_ky
             so_tien_con_lai_de_phan_bo -= nop_vao_ky
-            db_lich_su_cong_don_lai.NoiDung = f"{get_prefix_noi_dung(noi_dung_last_period, ky_so + 1)} |Sửa số tiền thanh toán: {tien_da_tra:,} VNĐ"
+            db_lich_su_cong_don_lai.NoiDung = f"{get_prefix_noi_dung(noi_dung_last_period, ky_so)} |Sửa số tiền thanh toán: {tien_da_tra:,} VNĐ"
 
             # Cập nhật trạng thái thanh toán kỳ
             if db_lich_su_cong_don_lai.TienDaTra >= db_lich_su_cong_don_lai.SoTien:
@@ -528,17 +543,17 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
         else:
             raise HTTPException(status_code=400, detail=f"Mã hợp đồng không hợp lệ: {ma_hd}")
         # check tat toan hop dong
-        tat_toan_hop_dong = check_tat_toan_hop_dong(db, ma_hd)
-        if tat_toan_hop_dong:
-            if "TG" in ma_hd:
-                create_lich_su_utils(db, 
-                    ma_hd=ma_hd, 
-                    ho_ten=contract.HoTen, 
-                    ngay=date.today(), 
-                    so_tien=tien_da_tra, 
-                    hanh_dong="Tất toán hợp đồng trả góp", 
-                    loai_hop_dong="TG"
-                )
+        # tat_toan_hop_dong = check_tat_toan_hop_dong(db, ma_hd)
+        # if tat_toan_hop_dong:
+        #     if "TG" in ma_hd:
+        #         create_lich_su_utils(db, 
+        #             ma_hd=ma_hd, 
+        #             ho_ten=contract.HoTen, 
+        #             ngay=date.today(), 
+        #             so_tien=tien_da_tra, 
+        #             hanh_dong="Tất toán hợp đồng trả góp", 
+        #             loai_hop_dong="TG"
+        #         )
 
     return {
         "success": True,
@@ -705,23 +720,31 @@ def auto_create_lich_su(db: Session) -> dict:
         tra_gop_contracts = db.execute(select(TraGop).where(TraGop.TrangThai != "DA_TAT_TOAN")).scalars().all()
         # Xử lý Tín Chấp
         for contract in tin_chap_contracts:
+            # if "TC015" not in contract.MaHD:
+            #     continue
             ma_hd = contract.MaHD
             # Chuẩn hóa trạng thái ngày cho TẤT CẢ bản ghi theo date_now
             all_records_tc = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all()
-            date_today_exists = any(rec.Ngay == date_now for rec in all_records_tc)
-            if date_today_exists:
-                continue
-            # Kiểm tra hôm nay có phải là ngày đóng lãi không
+            
             ky_dong = contract.KyDong
             if (date_now.day - contract.NgayVay.day) % ky_dong != 0:
                 continue
             for rec in all_records_tc:
                 if rec.Ngay < date_now:
                     rec.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.QUA_HAN.value
+                    rec.ThanhToan = False
+                    rec.SuaLichSu = False
                 elif rec.Ngay == date_now:
                     rec.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.DEN_HAN.value
+                    rec.ThanhToan = False
+                    rec.SuaLichSu = True
                 else:
                     rec.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
+                    rec.ThanhToan = False
+                    rec.SuaLichSu = False
+            date_today_exists = any(rec.Ngay == date_now  for rec in all_records_tc)
+            if date_today_exists:
+                continue
             
             
             # Tính số tiền cộng dồn từ tất cả các kỳ chưa trả
@@ -752,6 +775,7 @@ def auto_create_lich_su(db: Session) -> dict:
             if existing_today:
                 existing_today.SoTien = so_tien_ky_moi
                 existing_today.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.DEN_HAN.value
+                existing_today.SuaLichSu = True
                 # Cập nhật NoiDung thể hiện cộng dồn
                 existing_today.NoiDung = f"Trả lãi kỳ {ky_so + 1} (cộng dồn {tong_tien_chua_tra})"
                 records_updated += 1
@@ -763,6 +787,7 @@ def auto_create_lich_su(db: Session) -> dict:
                     NoiDung=f"Trả lãi kỳ {ky_so + 1} (cộng dồn {tong_tien_chua_tra})",
                     TrangThaiThanhToan=TrangThaiThanhToan.CHUA_THANH_TOAN.value,
                     TrangThaiNgayThanhToan=TrangThaiNgayThanhToan.DEN_HAN.value,
+                    SuaLichSu=True,
                     TienDaTra=0
                 )
                 db.add(db_lich_su)
@@ -782,12 +807,13 @@ def auto_create_lich_su(db: Session) -> dict:
 
             end_date = all_records_tg[-1].Ngay
             if end_date >= date_now:
-                # continue
+                # if "TG005" not in ma_hd:
+                #     continue
                 # Kiểm tra ngày hôm nay có phải là ngày đóng lãi không
                 check_ngay_dong_lai = db.query(LichSuTraLai).filter(
                     LichSuTraLai.MaHD == ma_hd,
                     LichSuTraLai.Ngay == date_now,
-                    LichSuTraLai.SoTien != LichSuTraLai.TienDaTra
+                    # LichSuTraLai.SoTien != LichSuTraLai.TienDaTra
                 ).first()
                 if not check_ngay_dong_lai:
                     continue
@@ -798,15 +824,21 @@ def auto_create_lich_su(db: Session) -> dict:
                     LichSuTraLai.Ngay == date_now-timedelta(days=ky_dong)
                 ).first()
                 
-                if not latest_ky or latest_ky.SoTien == latest_ky.TienDaTra:
+                if not latest_ky:
                     continue
                 for rec in all_records_tg:
                     if rec.Ngay < date_now:
                         rec.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.QUA_HAN.value
+                        rec.SuaLichSu = False
+                        rec.ThanhToan = False
                     elif rec.Ngay == date_now:
                         rec.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.DEN_HAN.value
+                        rec.SuaLichSu = True
+                        rec.ThanhToan = False
                     else:
                         rec.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
+                        rec.SuaLichSu = False
+                        rec.ThanhToan = False
                 
                 # Lưu số tiền gốc trước khi đặt = 0
                 so_tien_goc = latest_ky.SoTien
@@ -820,7 +852,7 @@ def auto_create_lich_su(db: Session) -> dict:
                 so_tien_moi_ky = (contract.SoTienVay + contract.LaiSuat) // contract.SoLanTra
                 check_ngay_dong_lai.SoTien = so_tien_moi_ky + tong_tien_chua_tra
                 check_ngay_dong_lai.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.DEN_HAN.value
-                
+                check_ngay_dong_lai.SuaLichSu = True
                 # Cập nhật NoiDung
                 if "kỳ" in latest_ky.NoiDung:
                     ky_so = int(latest_ky.NoiDung.split('kỳ ')[1].split(' ')[0]) + 1
@@ -855,6 +887,7 @@ def auto_create_lich_su(db: Session) -> dict:
                     NoiDung=f"Trả lãi kỳ {len(all_records_tg) + 1} (cộng dồn {tong_tien_chua_tra})",
                     TrangThaiThanhToan=TrangThaiThanhToan.CHUA_THANH_TOAN.value,
                     TrangThaiNgayThanhToan=TrangThaiNgayThanhToan.DEN_HAN.value,
+                    SuaLichSu=True,
                     TienDaTra=0
                 )
                 db.add(db_lich_su)
@@ -1102,17 +1135,17 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
             loai_hop_dong="TG")
     else:
         raise HTTPException(status_code=400, detail=f"Mã hợp đồng không hợp lệ: {ma_hd}")
-    tat_toan_hop_dong = check_tat_toan_hop_dong(db, ma_hd)
-    if tat_toan_hop_dong:
-        if "TG" in ma_hd:
-            create_lich_su_utils(db, 
-                ma_hd=ma_hd, 
-                ho_ten=contract.HoTen, 
-                ngay=date.today(), 
-                so_tien=so_tien, 
-                hanh_dong="Tất toán hợp đồng trả góp", 
-                loai_hop_dong="TG"
-            )
+    # tat_toan_hop_dong = check_tat_toan_hop_dong(db, ma_hd)
+    # if tat_toan_hop_dong:
+    #     if "TG" in ma_hd:
+    #         create_lich_su_utils(db, 
+    #             ma_hd=ma_hd, 
+    #             ho_ten=contract.HoTen, 
+    #             ngay=date.today(), 
+    #             so_tien=so_tien, 
+    #             hanh_dong="Tất toán hợp đồng trả góp", 
+    #             loai_hop_dong="TG"
+    #         )
 
     return {
         "success": True,
@@ -1134,9 +1167,12 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
     if so_tien <= 0:
         raise HTTPException(status_code=400, detail="Số tiền thanh toán phải > 0")
 
-    db_lich_su = get_lich_sus_by_contract(db, ma_hd)
+    # db_lich_su = get_lich_sus_by_contract(db, ma_hd)
+    today = date.today()
+    db_lich_su = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.Ngay >= today).all()
     if len(db_lich_su) != 0:
-        data_db_lich_su = sorted([db_lich_su for db_lich_su in db_lich_su if db_lich_su.SoTien != db_lich_su.TienDaTra], key=lambda x: x.Ngay)
+        # data_db_lich_su = sorted([db_lich_su for db_lich_su in db_lich_su if db_lich_su.SoTien != db_lich_su.TienDaTra], key=lambda x: x.Ngay)
+        data_db_lich_su = sorted(db_lich_su, key=lambda x: x.Ngay)
     else:
         data_db_lich_su = []
     so_tien_con_lai_de_phan_bo = so_tien
@@ -1188,6 +1224,8 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
                             )
                         ),
                         TienDaTra=0,
+                        ThanhToan=True,
+                        SuaLichSu=True
                     )
                 else:
                     # Các kỳ sau: chỉ ghi lãi đã được trả
@@ -1207,6 +1245,8 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
                             )
                         ),
                         TienDaTra=0,
+                        ThanhToan=False,
+                        SuaLichSu=False
                     )
                 db.add(period)
             
@@ -1222,6 +1262,8 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
                     if period.TienDaTra >= period.SoTien
                     else TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
                 )
+                period.ThanhToan = True
+                period.SuaLichSu = True
                 
                 if not is_first_period:
                     # Các kỳ sau: cộng dồn nội dung thanh toán
@@ -1231,6 +1273,8 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
                     # else:
                         # Chưa có ghi chú thanh toán, tạo mới
                     period.NoiDung = f"Trả lãi kỳ {ky_so} |Lãi đã được trả vào ngày {date.today().isoformat()}"
+                    period.ThanhToan = False
+                    period.SuaLichSu = False
                 
 
             # Nếu kỳ đã đóng đủ thì tiến sang ngày kế tiếp theo KyDong
@@ -1260,6 +1304,8 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
             else:
                 if is_first_period != False:
                     db_lich_su_cong_don_lai.NoiDung += f"| Số tiền thanh toán: {so_tien:,} VNĐ"
+                    db_lich_su_cong_don_lai.ThanhToan = True
+                    db_lich_su_cong_don_lai.SuaLichSu = True
 
             con_lai_ky = max(0, db_lich_su_cong_don_lai.SoTien - db_lich_su_cong_don_lai.TienDaTra)
             if con_lai_ky <= 0:
@@ -1289,6 +1335,8 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
                 else:
                     # Chưa có ghi chú thanh toán, tạo mới
                     db_lich_su_cong_don_lai.NoiDung += f" |{noi_dung_lai}"
+                db_lich_su_cong_don_lai.ThanhToan = False
+                db_lich_su_cong_don_lai.SuaLichSu = False
 
     # Kiểm tra tất toán: nếu tổng đã trả >= tổng cần trả
     if "TG" in ma_hd:
@@ -1310,6 +1358,15 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
         contract.TrangThai = (
             TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value if any_unpaid else TrangThaiThanhToan.DA_TAT_TOAN.value
         )
+        if any_unpaid:
+            create_lich_su_utils(db, 
+                ma_hd=ma_hd, 
+                ho_ten=contract.HoTen, 
+                ngay=date.today(), 
+                so_tien=so_tien, 
+                hanh_dong="Tất toán hợp đồng trả góp", 
+                loai_hop_dong="TG"
+            )
 
     db.commit()
 
@@ -1332,17 +1389,17 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
             loai_hop_dong="TG")
     else:
         raise HTTPException(status_code=400, detail=f"Mã hợp đồng không hợp lệ: {ma_hd}")
-    tat_toan_hop_dong = check_tat_toan_hop_dong(db, ma_hd)
-    if tat_toan_hop_dong:
-        if "TG" in ma_hd:
-            create_lich_su_utils(db, 
-                ma_hd=ma_hd, 
-                ho_ten=contract.HoTen, 
-                ngay=date.today(), 
-                so_tien=so_tien, 
-                hanh_dong="Tất toán hợp đồng trả góp", 
-                loai_hop_dong="TG"
-            )
+    # tat_toan_hop_dong = check_tat_toan_hop_dong(db, ma_hd)
+    # if tat_toan_hop_dong:
+    #     if "TG" in ma_hd:
+    #         create_lich_su_utils(db, 
+    #             ma_hd=ma_hd, 
+    #             ho_ten=contract.HoTen, 
+    #             ngay=date.today(), 
+    #             so_tien=so_tien, 
+    #             hanh_dong="Tất toán hợp đồng trả góp", 
+    #             loai_hop_dong="TG"
+    #         )
 
     return {
         "success": True,
@@ -1493,3 +1550,82 @@ def tat_toan_hop_dong(db: Session, ma_hd: str, tien_lai: int = 0) -> dict:
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Lỗi khi tất toán hợp đồng: {str(e)}")
+    
+def delete_thanh_toan(db: Session, ma_hd: str) -> dict:
+    """
+    Xóa tất cả các bản ghi lịch sử thanh toán từ ngày hôm nay đến hết của lãi của hợp đồng
+    """
+    try:
+        # Xác định loại hợp đồng
+        contract = None
+        if "TG" in ma_hd:
+            contract = db.query(TraGop).filter(TraGop.MaHD == ma_hd).first()
+        elif "TC" in ma_hd:
+            contract = db.query(TinChap).filter(TinChap.MaHD == ma_hd).first()
+        else:
+            raise HTTPException(status_code=400, detail=f"Mã hợp đồng không hợp lệ: {ma_hd}")
+
+        if not contract:
+            raise HTTPException(status_code=404, detail=f"Không tìm thấy hợp đồng {ma_hd}")
+
+        deleted_count = 0
+        
+        if "TC" in ma_hd:
+            # Tín Chấp
+            lich_su_today = db.query(LichSuTraLai).filter(
+                LichSuTraLai.MaHD == ma_hd,
+                LichSuTraLai.Ngay == date.today(),
+                LichSuTraLai.ThanhToan == True
+            ).first()
+            if lich_su_today:
+                lich_su_today.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.DEN_HAN.value
+                lich_su_today.TrangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN.value
+                lich_su_today.TienDaTra = 0
+                lich_su_today.ThanhToan = False
+                lich_su_today.NoiDung = lich_su_today.NoiDung.split("|")[0].strip()  # Giữ lại phần trước dấu '|'
+            
+            lich_su_to_delete = db.query(LichSuTraLai).filter(
+                LichSuTraLai.MaHD == ma_hd,
+                LichSuTraLai.Ngay > date.today(),
+            ).all()
+            for lich_su in lich_su_to_delete:
+                db.delete(lich_su)
+                deleted_count += 1
+            
+        else:
+            # Trả Góp
+            lich_su_today = db.query(LichSuTraLai).filter(
+                LichSuTraLai.MaHD == ma_hd,
+                LichSuTraLai.Ngay == date.today(),
+                LichSuTraLai.ThanhToan == True
+            ).first()
+            if lich_su_today:
+                lich_su_today.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.DEN_HAN.value
+                lich_su_today.TrangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN.value
+                lich_su_today.TienDaTra = 0
+                lich_su_today.ThanhToan = False
+                lich_su_today.NoiDung = lich_su_today.NoiDung.split("|")[0].strip()  # Giữ lại phần trước dấu '|'
+                
+                
+            lich_su_to_delete = db.query(LichSuTraLai).filter(
+                LichSuTraLai.MaHD == ma_hd,
+                LichSuTraLai.Ngay > date.today(),
+            ).all()
+            for lich_su in lich_su_to_delete:
+                lich_su.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
+                lich_su.TrangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN.value
+                lich_su.TienDaTra = 0
+                lich_su.ThanhToan = False
+                lich_su.NoiDung = lich_su.NoiDung.split("|")[0].strip()  # Giữ lại phần trước dấu '|'
+                deleted_count += 1
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Đã xóa {deleted_count} bản ghi lịch sử thanh toán cho hợp đồng {ma_hd} từ ngày hôm nay trở đi.",
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Lỗi khi xóa lịch sử thanh toán: {str(e)}")

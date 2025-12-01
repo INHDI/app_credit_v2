@@ -45,6 +45,18 @@ async def get_all_lich_su(skip: int = 0, limit: int = 100, db: Session = Depends
     return ApiResponse.success_response(data=lich_sus_response, message="Lấy danh sách lịch sử trả lãi thành công")
 
 
+@router.delete("/delete_thanh_toan", response_model=ApiResponse[Any])
+async def delete_thanh_toan(
+    ma_hd: str,
+    db: Session = Depends(get_db),
+):
+    """Delete payment history from date todate"""
+    result = crud_lich_su.delete_thanh_toan(db=db, ma_hd=ma_hd)
+    if not result:
+        raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
+    return ApiResponse.success_response(data=result, message="Xóa thanh toán lịch sử trả lãi thành công")
+
+
 @router.get("/{stt}", response_model=ApiResponse[LichSuTraLai])
 async def get_lich_su_by_id(stt: int, db: Session = Depends(get_db)):
     """Get a specific payment history record by STT"""

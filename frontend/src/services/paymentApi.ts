@@ -75,4 +75,17 @@ export async function updatePaymentHistory(
   return await resp.json();
 }
 
+// DELETE /lich-su-tra-lai/delete_thanh_toan?ma_hd={maHD}
+export async function deletePaymentToday(maHD: string): Promise<BasicApiResponse> {
+  const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/delete_thanh_toan?ma_hd=${encodeURIComponent(maHD)}`;
+  const resp = await fetch(url, {
+    method: 'DELETE',
+    headers: API_HEADERS.JSON_ACCEPT,
+  });
+  if (!resp.ok) {
+    throw new Error(`HTTP ${resp.status}`);
+  }
+  return await resp.json();
+}
+
 

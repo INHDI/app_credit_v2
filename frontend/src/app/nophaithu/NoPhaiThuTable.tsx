@@ -251,7 +251,7 @@ export default function NoPhaiThuTable({
                           aria-label="Đóng tiền"
                           onClick={() => handlePaymentClick(contract)}
                         >
-                          <DollarSign className="h-4 w-4 text-green-600" />
+                          <CheckCircle className="h-4 w-4 text-emerald-600" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -268,7 +268,7 @@ export default function NoPhaiThuTable({
                           aria-label="Tất toán"
                           onClick={() => handleSettleClick(contract)}
                         >
-                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                          <DollarSign className="h-4 w-4 text-green-600" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>

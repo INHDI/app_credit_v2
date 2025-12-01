@@ -8,7 +8,7 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app.core.database import init_db, engine, POSTGRES_SERVER, POSTGRES_PORT, POSTGRES_DB
+from app.core.database import init_db, engine, POSTGRES_SERVER, POSTGRES_PORT, POSTGRES_DB, update_db
 from sqlalchemy import inspect
 
 
@@ -42,6 +42,7 @@ def main():
     
     # Create tables
     init_db()
+    update_db()
     
     # Verify tables created
     inspector = inspect(engine)

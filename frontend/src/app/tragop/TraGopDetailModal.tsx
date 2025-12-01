@@ -83,6 +83,8 @@ export default function TraGopDetailModal({
           ghi_chu: item.NoiDung,
           NoiDung: item.NoiDung, // Add NoiDung field for PaymentsList component
           created_at: undefined,
+          ThanhToan: item.ThanhToan, // Add ThanhToan field for PaymentsList component
+          SuaLichSu: item.SuaLichSu, // Add SuaLichSu field for PaymentsList component
         }));
       }
       // TODO: fallback to API when needed

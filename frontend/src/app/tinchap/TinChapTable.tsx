@@ -48,6 +48,21 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
     return Number.isNaN(timestamp) ? 0 : timestamp;
   };
 
+  const lastDateLichSuTraLai = (contract: CreditContract): string | null => {
+    const lichSu = Array.isArray(contract.LichSuTraLai) ? contract.LichSuTraLai : [];
+    if (lichSu.length === 0) return null;
+    const lastEntry = lichSu.reduce((latest: any, entry: any) => {
+      const entryDate = Date.parse(entry?.Ngay || '') || 0;
+      const latestDate = Date.parse(latest?.Ngay || '') || 0;
+      return entryDate > latestDate ? entry : latest;
+    }, lichSu[0]);
+    try {
+      return lastEntry && lastEntry.Ngay ? new Date(lastEntry.Ngay).toLocaleDateString('vi-VN') : null;
+    } catch (e) {
+      return lastEntry?.Ngay ?? null;
+    }
+  };
+
   const sortedContracts = useMemo(() => {
     return [...contracts].sort((a, b) => {
       const aSettled = isContractSettled(a);
@@ -119,6 +134,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
           </thead>
           <tbody>
             {sortedContracts.map((contract, index) => (
+              // console.log("Rendering contract:", lastDateLichSuTraLai(contract)),
               <tr key={`tinchap-table-${instanceId}-${startIndex}-${index}-${contract.id}`} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-slate-50/50 hover:to-blue-50/30 transition-all duration-200">
                 <td className="p-4 text-slate-600 font-medium">{startIndex + index + 1}</td>
                 <td className="p-4">
@@ -131,6 +147,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                 </td>
                 <td className="p-4">
                   <div className="font-medium text-slate-800">{contract.HoTen}</div>
+                  <div className="text-xs text-slate-500">Lãi đã trả đến ngày: {lastDateLichSuTraLai(contract)}</div>
                 </td>
                 <td className="p-4">
                   <div className="text-sm text-slate-600">{contract.NgayVay}</div>
@@ -146,6 +163,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                 </td>
                 <td className="p-4 text-right">
                   <div className="font-bold text-red-600 text-sm">{formatCurrency(contract.LaiConLai || 0)}</div>
+                  
                 </td>
                 <td className="p-4 text-right">
                   <div className="font-bold text-blue-600 text-sm">{formatCurrency(contract.GocConLai || 0)}</div>
@@ -258,6 +276,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                 <div className="text-xs text-slate-500">#{startIndex + index + 1} • {contract.MaHD}</div>
                 <div className="font-semibold text-slate-800">{contract.HoTen}</div>
                 <div className="text-xs text-slate-500 mt-1">Ngày vay: {contract.NgayVay}</div>
+                <div className="text-xs text-slate-500 mt-1">Lãi đã trả đến ngày: {lastDateLichSuTraLai(contract)}</div>
               </div>
               <div className="flex flex-col gap-1 items-center">
                 <Badge className={`${

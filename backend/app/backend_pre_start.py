@@ -46,9 +46,13 @@ def main():
     # Initialize database
     print("Initializing database...")
     try:
-        from app.core.database import init_db
+        from app.core.database import init_db, update_db
+        
         init_db()
         print("✅ Database initialization completed!")
+        update_db()
+        print("✅ Database update completed!")
+        
     except Exception as e:
         print(f"❌ Database initialization failed: {e}")
         sys.exit(1)

@@ -14,14 +14,16 @@ import {
   Hash,
   Receipt,
   CalendarDays,
-  CheckCircle
+  CheckCircle,
+  Trash2
 } from 'lucide-react';
 import { ContractDetailData, PaymentHistoryItem, DetailTab } from '@/types/contractDetail';
 import { ContractDetailConfig } from '@/types/contractDetail';
 import PaymentModal from './PaymentModal';
 import PaymentsList from './PaymentsList';
 import PrincipalPaymentModal from "./PrincipalPaymentModal";
-import { payPrincipalTinChap } from "@/services/paymentApi";
+import DeletePaymentModal from './DeletePaymentModal';
+import { payPrincipalTinChap, deletePaymentToday } from "@/services/paymentApi";
 
 interface GenericContractDetailModalProps {
   isOpen: boolean;
@@ -45,11 +47,82 @@ export default function GenericContractDetailModal({
   const [activeTab, setActiveTab] = useState("overview");
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<{maHD: string, amount: number} | null>(null);
+  // const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  // const [selectedPayment, setSelectedPayment] = useState<{maHD: string, amount: number} | null>(null);
   const [principalModalOpen, setPrincipalModalOpen] = useState(false);
   const [thanhToanLai, setThanhToanLai] = useState(false);
   const [tongTienCanThanhToan, setTongTienCanThanhToan] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletePaymentModalOpen, setDeletePaymentModalOpen] = useState(false);
+
+  // Kiểm tra xem hôm nay đã có thanh toán chưa
+  const checkActionThanhToanLai = () => {
+    
+    const today = new Date().toISOString().split('T')[0];
+    // Lấy ra mảng các ngày lớn hơn ngày hôm nay
+    if (contract?.ma_hop_dong.includes('TC') ) {
+      const hasPaymentToday = paymentHistory
+        .filter((item: any) => {
+          const paymentDate = item.ngay_tra_lai || item.Ngay;
+          return paymentDate > today;
+        })
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.ngay_tra_lai || a.Ngay).getTime();
+          const dateB = new Date(b.ngay_tra_lai || b.Ngay).getTime();
+          return dateA - dateB; // Sắp xếp từ nhỏ đến lớn
+        })[0];
+        if (!hasPaymentToday) return false;
+      // console.log('paymentHistory', paymentHistory);
+      return hasPaymentToday.SuaLichSu === true;
+    }
+
+    const paymentToday = paymentHistory.find((item: any) => {
+      const paymentDate = item.ngay_tra_lai || item.Ngay;
+      return paymentDate === today && item.ThanhToan === true;
+    });
+    return !!paymentToday;
+  };
+
+  // Hàm mở modal xóa thanh toán lãi
+  const handleOpenDeletePaymentModal = () => {
+    setDeletePaymentModalOpen(true);
+  };
+
+  // Hàm xử lý xóa thanh toán lãi
+  const handleDeletePaymentConfirm = async () => {
+    if (!contract) return;
+
+    setIsDeleting(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const paymentToday = paymentHistory.find((item: any) => {
+        const paymentDate = item.ngay_tra_lai || item.Ngay;
+        return paymentDate === today && item.ThanhToan === true;
+      });
+
+      if (paymentToday) {
+        // Gọi API xóa thanh toán
+        const maHD = (contract as any).MaHD || (contract as any).ma_hop_dong;
+        await deletePaymentToday(maHD);
+
+        // Reload payment history
+        if (onLoadPaymentHistory && contract?.ma_hop_dong) {
+          const data = await onLoadPaymentHistory(contract.ma_hop_dong);
+          setPaymentHistory(data);
+        }
+
+        // Refresh contract info
+        if (onRefresh) {
+          onRefresh();
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      throw error;
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Fetch payment history when modal opens
   useEffect(() => {
@@ -84,10 +157,10 @@ export default function GenericContractDetailModal({
   }, [isOpen, contract?.ma_hop_dong, onLoadPaymentHistory]);
 
   // Function mở modal thanh toán
-  const handlePayment = (maHD: string, paymentAmount: number) => {
-    setSelectedPayment({ maHD: maHD, amount: paymentAmount });
-    setPaymentModalOpen(true);
-  };
+  // const handlePayment = (maHD: string, paymentAmount: number) => {
+  //   setSelectedPayment({ maHD: maHD, amount: paymentAmount });
+  //   setPaymentModalOpen(true);
+  // };
 
   // Function xử lý sau khi thanh toán thành công
   const handlePaymentSuccess = async () => {
@@ -346,16 +419,31 @@ export default function GenericContractDetailModal({
             >
               Thanh toán gốc
             </Button>}
+            
+            {/* Hiển thị nút thanh toán lãi chỉ khi chưa thanh toán hôm nay */}
+            {!checkActionThanhToanLai() && (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <Button
+                  onClick={() => setThanhToanLai(true)}
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl shadow-md px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium flex-shrink-0 w-full sm:w-auto"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Thanh toán lãi
+                </Button>
+              </div>
+            )}
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            {/* Hiển thị nút xóa thanh toán lãi khi đã thanh toán hôm nay */}
+            {checkActionThanhToanLai() && (
               <Button
-                onClick={() => setThanhToanLai(true)}
-                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl shadow-md px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium flex-shrink-0 w-full sm:w-auto"
+                onClick={handleOpenDeletePaymentModal}
+                disabled={isDeleting}
+                className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white rounded-xl shadow-md px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium flex-shrink-0 w-full sm:w-auto"
               >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Thanh toán lãi
+                <Trash2 className="h-4 w-4 mr-2" />
+                Xóa thanh toán lãi
               </Button>
-            </div>
+            )}
           </>
         )}
       </div>
@@ -383,12 +471,12 @@ export default function GenericContractDetailModal({
           paymentAmount={tongTienCanThanhToan}
           onPaymentSuccess={handlePaymentSuccess}
           onProcessPayment={onProcessPayment}
-          tienCanThanhToanTheoKy={contract.so_ky_tra ? (Number(totalAmount) + Number(contract.lai_suat)) / Number(contract.so_ky_tra) : Number(contract.lai_suat)}
+          tienCanThanhToanTheoKy={contract.so_ky_tra ? Math.round((Number(totalAmount) + Number(contract.lai_suat)) / Number(contract.so_ky_tra) / 1000) * 1000 : Number(contract.lai_suat)}
         />
       )}
 
       {/* Payment Modal */}
-      {selectedPayment && (
+      {/* {selectedPayment && (
         <PaymentModal
           isOpen={paymentModalOpen}
           onClose={() => {
@@ -400,6 +488,20 @@ export default function GenericContractDetailModal({
           onPaymentSuccess={handlePaymentSuccess}
           onProcessPayment={onProcessPayment}
           tienCanThanhToanTheoKy={contract.so_ky_tra ? (Number(totalAmount) + Number(contract.lai_suat)) / Number(contract.so_ky_tra) : Number(contract.lai_suat)}
+        />
+      )} */}
+
+      {/* Delete Payment Modal */}
+      {contract && (
+        <DeletePaymentModal
+          isOpen={deletePaymentModalOpen}
+          onClose={() => setDeletePaymentModalOpen(false)}
+          maHopDong={(contract as any).MaHD || (contract as any).ma_hop_dong}
+          tenKhachHang={contract.ten_khach_hang}
+          onConfirm={handleDeletePaymentConfirm}
+          afterDeleted={() => {
+            setDeletePaymentModalOpen(false);
+          }}
         />
       )}
     </Modal>

@@ -1,7 +1,7 @@
 """
 LichSuTraLai model - Lịch sử trả lãi (Payment history)
 """
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Column, Integer, String, Date, Boolean
 from app.core.database import Base
 import datetime
 
@@ -20,6 +20,8 @@ class LichSuTraLai(Base):
     TrangThaiThanhToan = Column(String, nullable=False)  # Trạng thái thanh toán
     TrangThaiNgayThanhToan = Column(String, nullable=False)  # Trạng thái ngày thanh toán
     TienDaTra = Column(Integer, nullable=False)  # Total amount paid so far
+    ThanhToan = Column("thanhtoan", Boolean, nullable=True, default=False)  # Whether this payment has been made
+    SuaLichSu = Column("sualichsu", Boolean, nullable=True, default=False)  # Whether this record has been edited
 
     def __repr__(self):
         return f"<LichSuTraLai(Stt={self.Stt}, MaHD='{self.MaHD}', SoTien={self.SoTien})>"

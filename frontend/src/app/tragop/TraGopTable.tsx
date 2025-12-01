@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Eye, Calendar, CheckCircle, Trash2, Edit } from 'lucide-react';
+import { Eye, Calendar, DollarSign, Trash2, Edit } from 'lucide-react';
 import { formatCurrency } from "@/utils/formatters";
 import { CreditContract } from "@/hooks/useTraGop";
 import PaymentScheduleModal from "@/components/ui/PaymentScheduleModal";
@@ -237,7 +237,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                             aria-label="Tất toán"
                             onClick={() => handleOpenSettle(contract)}
                           >
-                            <CheckCircle className="h-4 w-4 text-emerald-600" />
+                            <DollarSign className="h-4 w-4 text-emerald-600" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -355,7 +355,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="sm" className="rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50 flex-1" onClick={() => handleOpenSettle(contract)}>
-                        <CheckCircle className="h-4 w-4 mr-1" /> Tất toán
+                        <DollarSign className="h-4 w-4 mr-1" /> Tất toán
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
