@@ -720,15 +720,20 @@ def auto_create_lich_su(db: Session) -> dict:
         tra_gop_contracts = db.execute(select(TraGop).where(TraGop.TrangThai != "DA_TAT_TOAN")).scalars().all()
         # Xử lý Tín Chấp
         for contract in tin_chap_contracts:
-            # if "TC015" not in contract.MaHD:
+            # if "TC016" not in contract.MaHD:
             #     continue
             ma_hd = contract.MaHD
             # Chuẩn hóa trạng thái ngày cho TẤT CẢ bản ghi theo date_now
             all_records_tc = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all()
             
             ky_dong = contract.KyDong
-            if (date_now.day - contract.NgayVay.day) % ky_dong != 0:
-                continue
+            if ky_dong == 1:
+                if (date_now.day - contract.NgayVay.day) % ky_dong != 0:
+                    continue
+            else:
+                print ((date_now.day - contract.NgayVay.day + 1) % ky_dong)
+                if (date_now.day - contract.NgayVay.day + 1) % ky_dong != 0:
+                    continue
             for rec in all_records_tc:
                 if rec.Ngay < date_now:
                     rec.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.QUA_HAN.value

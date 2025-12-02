@@ -139,7 +139,12 @@ export default function GenericContractDetailModal({
             // } else {
               // lấy ra tổng so_tien_lai với điều kiện TrangThaiNgayThanhToan = 'Đến hạn' và TrangThaiNgayThanhToan = 'Quá hạn'
               // console.log('data', data)
-            const soTienCanThanhToan = data.filter((item: any) => item.TrangThaiNgayThanhToan === 'Đến hạn' || item.TrangThaiNgayThanhToan === 'Quá hạn').reduce((acc: number, item: any) => acc + Number(item.so_tien_lai - item.so_tien_tra), 0);
+            // console.log('data', data);
+            const soTienCanThanhToan = data.filter((item: any) => 
+              item.ThanhToan === true)
+              .reduce((acc: number, item: any) => acc + Number(item.so_tien_lai - item.so_tien_tra), 0);
+            
+            // console.log('soTienCanThanhToan', soTienCanThanhToan);
             setTongTienCanThanhToan(soTienCanThanhToan);
 
             // }

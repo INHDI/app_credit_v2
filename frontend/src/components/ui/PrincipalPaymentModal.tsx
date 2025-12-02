@@ -28,6 +28,7 @@ export default function PrincipalPaymentModal({
   const [partialAmount, setPartialAmount] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+  // console.log('remainingPrincipal', remainingPrincipal);
 
   const parsedPartial = Math.max(0, parseFloat(partialAmount) || 0);
   const cappedPartial = Math.min(parsedPartial, remainingPrincipal || Number.MAX_SAFE_INTEGER);
