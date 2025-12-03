@@ -2,7 +2,8 @@
 CRUD operations for TraGop
 """
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func, case, cast
+from sqlalchemy.sql.sqltypes import Integer
 from typing import List, Optional
 from datetime import date
 from fastapi import HTTPException
@@ -47,6 +48,7 @@ def get_tra_gops(
     sort_by: str = "NgayVay",
     sort_dir: str = "desc",
     today_only: bool = False,
+    server_sort: bool = True,
 ) -> dict:
     """
     Get TraGop contracts with filter/search/sort/pagination and enrich with lịch sử + totals.
@@ -63,21 +65,45 @@ def get_tra_gops(
     if today_only:
         query = query.filter(TraGop.NgayVay == date.today())
 
-    allowed_sort_fields = {
-        "MaHD": TraGop.MaHD,
-        "HoTen": TraGop.HoTen,
-        "NgayVay": TraGop.NgayVay,
-        "SoTienVay": TraGop.SoTienVay,
-        "KyDong": TraGop.KyDong,
-        "SoLanTra": TraGop.SoLanTra,
-        "LaiSuat": TraGop.LaiSuat,
-        "TrangThai": TraGop.TrangThai,
-    }
-    sort_column = allowed_sort_fields.get(sort_by, TraGop.NgayVay)
-    if sort_dir.lower() == "asc":
-        query = query.order_by(sort_column.asc())
+    # Server-side ordering: default behaviour is to put unsettled contracts first,
+    # then sort by numeric part of MaHD in descending order (e.g., TG018 before TG017).
+    # If server_sort is False, fall back to client-requested sort_by/sort_dir only.
+    if server_sort:
+        # Build expression to detect various forms of "tất toán" in TrangThai
+        settled_case = case(
+            (TraGop.TrangThai.ilike('%tất toán%'), 1),
+            (TraGop.TrangThai.ilike('%da tat toan%'), 1),
+            (TraGop.TrangThai.ilike('%da_thanh_toan%'), 1),
+            else_=0,
+        )
+
+        # Extract numeric part from MaHD using substring (first continuous digits), coalesce to '0', cast to integer
+        # Use PostgreSQL substring with regex: substring(string from pattern)
+        num_part = cast(
+            func.coalesce(func.substring(TraGop.MaHD, '\\d+'), '0'),
+            Integer,
+        )
+
+        # Apply primary ordering: unsettled (0) first, settled (1) last; then MaHD number desc
+        # Add deterministic tie-breakers: NgayVay desc, MaHD desc
+        query = query.order_by(settled_case.asc(), num_part.desc(), TraGop.NgayVay.desc(), TraGop.MaHD.desc())
     else:
-        query = query.order_by(sort_column.desc())
+        # Apply client-requested ordering only
+        allowed_sort_fields = {
+            "MaHD": TraGop.MaHD,
+            "HoTen": TraGop.HoTen,
+            "NgayVay": TraGop.NgayVay,
+            "SoTienVay": TraGop.SoTienVay,
+            "KyDong": TraGop.KyDong,
+            "SoLanTra": TraGop.SoLanTra,
+            "LaiSuat": TraGop.LaiSuat,
+            "TrangThai": TraGop.TrangThai,
+        }
+        sort_column = allowed_sort_fields.get(sort_by, TraGop.NgayVay)
+        if sort_dir.lower() == "asc":
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
 
     # Count BEFORE pagination
     total = query.count()
@@ -109,6 +135,8 @@ def get_tra_gops(
         )
 
     total_pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+    # Note: removed temporary debug logging to keep output clean in production
+
     return {
         "items": results,
         "total": total,

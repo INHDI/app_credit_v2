@@ -57,11 +57,11 @@ export default function GenericContractDetailModal({
 
   // Kiểm tra xem hôm nay đã có thanh toán chưa
   const checkActionThanhToanLai = () => {
-    
     const today = new Date().toISOString().split('T')[0];
     // Lấy ra mảng các ngày lớn hơn ngày hôm nay
-    if (contract?.ma_hop_dong.includes('TC') ) {
-      const hasPaymentToday = paymentHistory
+    let hasPaymentToday
+    if (contract?.ma_hop_dong.includes('TC') && Number(contract?.so_ky_tra) > 1 ) {
+      hasPaymentToday = paymentHistory
         .filter((item: any) => {
           const paymentDate = item.ngay_tra_lai || item.Ngay;
           return paymentDate > today;
@@ -72,7 +72,6 @@ export default function GenericContractDetailModal({
           return dateA - dateB; // Sắp xếp từ nhỏ đến lớn
         })[0];
         if (!hasPaymentToday) return false;
-      // console.log('paymentHistory', paymentHistory);
       return hasPaymentToday.SuaLichSu === true;
     }
 
@@ -80,6 +79,7 @@ export default function GenericContractDetailModal({
       const paymentDate = item.ngay_tra_lai || item.Ngay;
       return paymentDate === today && item.ThanhToan === true;
     });
+    
     return !!paymentToday;
   };
 
@@ -131,23 +131,15 @@ export default function GenericContractDetailModal({
         setLoading(true);
         try {
           const data = await onLoadPaymentHistory(contract.ma_hop_dong);
-          // console.log('data', data)
           setTongTienCanThanhToan(0);
           if (data.length > 0) {
-            // if (contract.ma_hop_dong.includes('TC')) {
-            //   setTongTienCanThanhToan(Number(data[data.length - 1].so_tien_lai));
-            // } else {
-              // lấy ra tổng so_tien_lai với điều kiện TrangThaiNgayThanhToan = 'Đến hạn' và TrangThaiNgayThanhToan = 'Quá hạn'
-              // console.log('data', data)
-            // console.log('data', data);
-            const soTienCanThanhToan = data.filter((item: any) => 
-              item.ThanhToan === true)
-              .reduce((acc: number, item: any) => acc + Number(item.so_tien_lai - item.so_tien_tra), 0);
-            
-            // console.log('soTienCanThanhToan', soTienCanThanhToan);
+            const soTienCanThanhToan = data.reduce((acc: number, item: any) => {
+              if (item.SuaLichSu === true) {
+                return acc + Number(item.so_tien_lai - item.so_tien_tra);
+              }
+              return acc;
+            }, 0);
             setTongTienCanThanhToan(soTienCanThanhToan);
-
-            // }
           }
           setPaymentHistory(data);
         } catch (error) {
@@ -192,6 +184,12 @@ export default function GenericContractDetailModal({
 
   // Chỉ hiển thị thông tin cơ bản
   const totalAmount = contract.tong_tien_vay || 0;
+  // Compute per-period payment on render to avoid stale state when opening PaymentModal
+  const computedThanhToanMotPhan = contract?.ma_hop_dong?.includes('TC')
+    ? Number(contract.daily_interest || 0)
+    : contract?.so_ky_tra
+    ? Math.round((Number(totalAmount) + Number(contract.lai_suat)) / Number(contract.so_ky_tra) / 1000) * 1000
+    : Number(contract?.lai_suat || 0);
 
   // Render tab content based on active tab
   const renderTabContent = () => {
@@ -476,7 +474,7 @@ export default function GenericContractDetailModal({
           paymentAmount={tongTienCanThanhToan}
           onPaymentSuccess={handlePaymentSuccess}
           onProcessPayment={onProcessPayment}
-          tienCanThanhToanTheoKy={contract.so_ky_tra ? Math.round((Number(totalAmount) + Number(contract.lai_suat)) / Number(contract.so_ky_tra) / 1000) * 1000 : Number(contract.lai_suat)}
+          tienCanThanhToanTheoKy={computedThanhToanMotPhan}
         />
       )}
 

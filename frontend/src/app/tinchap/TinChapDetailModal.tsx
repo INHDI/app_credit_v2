@@ -59,7 +59,7 @@ export default function TinChapDetailModal({
         amount_to_collect: undefined,
         daily_interest: contract.LaiSuat,
         status: contract.TrangThai || 'Không xác định',
-        // so_ky_tra: contract.SoLanTra,
+        so_ky_tra: contract.KyDong,
         statusColor: (contract.TrangThai || '').includes('tất toán')
           ? 'bg-emerald-100 text-emerald-700'
           : (contract.TrangThai || '').includes('một phần')

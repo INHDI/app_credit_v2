@@ -4,7 +4,7 @@ CRUD operations for LichSuTraLai
 from datetime import date, timedelta
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from typing import List, Optional
 
 from app.core.enums import TrangThaiThanhToan, TrangThaiNgayThanhToan
@@ -107,7 +107,7 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
         lai_suat = data_hop_dong.LaiSuat
         date_now = date.today()
 
-        # 4. Tính số tiền mỗi kỳ dựa trên loại hợp đồng
+        # 3. Tính số tiền mỗi kỳ dựa trên loại hợp đồng
         so_tien_moi_ky = 0
         if loai_hop_dong == "TC":
             # Tín Chấp: Mỗi kỳ chỉ trả lãi
@@ -120,7 +120,7 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
                 raise HTTPException(status_code=400, detail="SoLanTra phải lớn hơn 0")
             so_tien_moi_ky = (so_tien_vay + lai_suat) // so_lan_tra  # Làm tròn xuống
         
-        # 5. Tạo danh sách kỳ thanh toán
+        # 4. Tạo danh sách kỳ thanh toán
         danh_sach_ky = []
         
         if loai_hop_dong == "TG":
@@ -146,12 +146,13 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
             ngay_ky_hien_tai = ngay_vay + timedelta(days=ky_dong)  # Kỳ đầu tiên
             ky_thu = 1
             if ngay_vay == date_now and ky_dong == 1:
-                ky_thu += 1
                 danh_sach_ky.append({
                     "ngay": ngay_vay,
                     "ky_thu": ky_thu,
                     "so_tien_ky": so_tien_moi_ky
                 })
+                ky_thu += 1
+                
 
             while ngay_ky_hien_tai <= date_now:
                 danh_sach_ky.append({
@@ -179,12 +180,16 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
             if loai_hop_dong == "TG" and end_date < date_now:
                 # Trả Góp: Nếu ngày cuối cùng đã quá hạn, tất cả các kỳ đều QUA_HAN
                 trang_thai_ngay = TrangThaiNgayThanhToan.QUA_HAN.value
+                sua_lich_su = False
             elif ky["ngay"] == date_now:
                 trang_thai_ngay = TrangThaiNgayThanhToan.DEN_HAN.value
+                sua_lich_su = True
             elif ky["ngay"] < date_now:
                 trang_thai_ngay = TrangThaiNgayThanhToan.QUA_HAN.value
+                sua_lich_su = False
             else:
                 trang_thai_ngay = TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
+                sua_lich_su = False
             
             # Tính số tiền dựa trên loại hợp đồng và trạng thái
             if loai_hop_dong == "TG":
@@ -225,7 +230,8 @@ def create_lich_su(db: Session, ma_hd: str) -> dict:
                 TrangThaiThanhToan=TrangThaiThanhToan.CHUA_THANH_TOAN.value,
                 TrangThaiNgayThanhToan=trang_thai_ngay,
                 TienDaTra=0,
-                ThanhToan=False
+                ThanhToan=False,
+                SuaLichSu=sua_lich_su
             )
             db.add(db_lich_su)
         # 8. Commit vào database
@@ -1217,7 +1223,7 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
                         MaHD=ma_hd,
                         Ngay=current_date,
                         SoTien=daily_interest,
-                        NoiDung=f"Số tiền thanh toán: {so_tien}",
+                        NoiDung=f"Trả lãi kỳ {ky_so} |Số tiền thanh toán: {so_tien}",
                         TrangThaiThanhToan=TrangThaiThanhToan.CHUA_THANH_TOAN.value,
                         TrangThaiNgayThanhToan=(
                             TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
@@ -1355,15 +1361,21 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
             contract.TrangThai = TrangThaiThanhToan.DA_TAT_TOAN.value
     # Cập nhật trạng thái hợp đồng dựa trên tổng còn nợ trong lịch sử (nếu chưa tất toán)
     if contract and contract.TrangThai != TrangThaiThanhToan.DA_TAT_TOAN.value and "TG" in ma_hd:
-        any_unpaid = db.query(LichSuTraLai).filter(
+        # Tính tổng `TienDaTra` cho hợp đồng (dùng SQL SUM)
+        check_tat_toan = (db.query(func.coalesce(func.sum(LichSuTraLai.TienDaTra), 0)).filter(
             LichSuTraLai.MaHD == ma_hd,
-            LichSuTraLai.SoTien > LichSuTraLai.TienDaTra
-        ).first() is not None
+        ).scalar() or 0) + so_tien
+        
+        if check_tat_toan >= (contract.SoTienVay + contract.LaiSuat):
+            check_tat_toan_bool = True
+        else:
+            check_tat_toan_bool = False
 
+        # If check_tat_toan_bool is True -> fully settled (DA_TAT_TOAN), otherwise partial (THANH_TOAN_MOT_PHAN)
         contract.TrangThai = (
-            TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value if any_unpaid else TrangThaiThanhToan.DA_TAT_TOAN.value
+            TrangThaiThanhToan.DA_TAT_TOAN.value if check_tat_toan_bool else TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
         )
-        if any_unpaid:
+        if check_tat_toan_bool:
             create_lich_su_utils(db, 
                 ma_hd=ma_hd, 
                 ho_ten=contract.HoTen, 

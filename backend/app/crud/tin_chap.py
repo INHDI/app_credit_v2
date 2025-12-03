@@ -2,7 +2,8 @@
 CRUD operations for TinChap
 """
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func, case, cast
+from sqlalchemy.sql.sqltypes import Integer
 from typing import List, Optional
 from datetime import date
 from fastapi import HTTPException
@@ -128,6 +129,7 @@ def get_tin_chaps(
     sort_by: str = "NgayVay",
     sort_dir: str = "desc",
     today_only: bool = False,
+    server_sort: bool = True,
 ) -> dict:
     """
     Get TinChap contracts with filter/search/sort/pagination and payment history
@@ -155,10 +157,44 @@ def get_tin_chaps(
             "TrangThai": TinChap.TrangThai,
         }
         sort_column = allowed_sort_fields.get(sort_by, TinChap.NgayVay)
-        if sort_dir.lower() == "asc":
-            query = query.order_by(sort_column.asc())
+        if server_sort:
+            # Server-side ordering: unsettled contracts first (status not containing 'tất toán'),
+            # then sort by numeric part of MaHD (TCXXX) descending.
+            settled_case = case(
+                (TinChap.TrangThai.ilike('%tất toán%'), 1),
+                (TinChap.TrangThai.ilike('%da tat toan%'), 1),
+                (TinChap.TrangThai.ilike('%da_thanh_toan%'), 1),
+                else_=0,
+            )
+            num_part = cast(
+                func.coalesce(func.substring(TinChap.MaHD, '\\d+'), '0'),
+                Integer,
+            )
+            # Deterministic ordering: unsettled first, then numeric MaHD desc, then NgayVay desc, MaHD desc
+            query = query.order_by(settled_case.asc(), num_part.desc(), TinChap.NgayVay.desc(), TinChap.MaHD.desc())
+            # Apply client-requested secondary sort if provided
+            allowed_sort_fields = {
+                "MaHD": TinChap.MaHD,
+                "HoTen": TinChap.HoTen,
+                "NgayVay": TinChap.NgayVay,
+                "SoTienVay": TinChap.SoTienVay,
+                "KyDong": TinChap.KyDong,
+                "LaiSuat": TinChap.LaiSuat,
+                "TrangThai": TinChap.TrangThai,
+            }
+            sort_column = allowed_sort_fields.get(sort_by)
+            if sort_column is not None:
+                if sort_dir.lower() == "asc":
+                    query = query.order_by(sort_column.asc())
+                else:
+                    query = query.order_by(sort_column.desc())
         else:
-            query = query.order_by(sort_column.desc())
+            # client requested ordering only
+            sort_column = TinChap.NgayVay
+            if sort_dir.lower() == "asc":
+                query = query.order_by(sort_column.asc())
+            else:
+                query = query.order_by(sort_column.desc())
 
         # Count BEFORE pagination
         total = query.count()
@@ -194,6 +230,8 @@ def get_tin_chaps(
 
         # Build paginated payload
         total_pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+        # Note: removed temporary debug logging to keep output clean in production
+
         return {
             "items": results,
             "total": total,
@@ -394,6 +432,8 @@ def tra_goc_tin_chap(db: Session, ma_hd: str, so_tien_tra_goc: int) -> bool:
             else:
                 db_tin_chap.TrangThai = TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
         db_lich_su_tra_lai_tin_chap_today = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.Ngay == date.today()).first()
+        if not db_lich_su_tra_lai_tin_chap_today:
+            db_lich_su_tra_lai_tin_chap_today = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).first()
         if db_lich_su_tra_lai_tin_chap_today:
             if "Trả gốc" not in db_lich_su_tra_lai_tin_chap_today.NoiDung:
                 db_lich_su_tra_lai_tin_chap_today.NoiDung = f"Trả gốc: {so_tien_tra_goc:,} VNĐ| {db_lich_su_tra_lai_tin_chap_today.NoiDung}"

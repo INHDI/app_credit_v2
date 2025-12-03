@@ -53,6 +53,7 @@ async def get_all_tin_chap(
     sort_by: str = "MaHD",
     sort_dir: str = "desc",
     today_only: bool = False,
+    server_sort: bool = True,
     db: Session = Depends(get_db)
     ):
     """Get all TinChap contracts with filter/search/sort/pagination with totals"""
@@ -65,6 +66,7 @@ async def get_all_tin_chap(
         sort_by=sort_by,
         sort_dir=sort_dir,
         today_only=today_only,
+        server_sort=server_sort,
     )
     return ApiResponse.success_response(data=result, message="Lấy danh sách hợp đồng tín chấp thành công")
 

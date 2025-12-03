@@ -35,38 +35,21 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
   const [showEdit, setShowEdit] = useState(false);
   const [selectedForEdit, setSelectedForEdit] = useState<CreditContract | null>(null);
 
-  const isContractSettled = (contract: CreditContract) => {
-    const status = (contract.TrangThai || contract.status || "").toLowerCase();
-    return status.includes("tất toán");
+  const lastDateLichSuTraLai = (contract: CreditContract): string | null => {
+    const lichSu = Array.isArray(contract.LichSuTraLai) ? contract.LichSuTraLai : [];
+    if (lichSu.length === 0) return null;
+    const lastEntry = lichSu.reduce((latest: any, entry: any) => {
+      const entryDate = Date.parse(entry?.Ngay || '') || 0;
+      const latestDate = Date.parse(latest?.Ngay || '') || 0;
+      return entryDate > latestDate ? entry : latest;
+    }, lichSu[0]);
+    try {
+      return lastEntry && lastEntry.Ngay ? new Date(lastEntry.Ngay).toLocaleDateString('vi-VN') : null;
+    } catch (e) {
+      return lastEntry?.Ngay ?? null;
+    }
   };
-
-  const getContractDateValue = (contract: CreditContract) => {
-    const rawDate =
-      contract.NgayVay ||
-      (contract as { ngay_vay?: string }).ngay_vay ||
-      (contract as { created_at?: string }).created_at ||
-      (contract as { updated_at?: string }).updated_at ||
-      "";
-    const timestamp = rawDate ? Date.parse(rawDate) : NaN;
-    return Number.isNaN(timestamp) ? 0 : timestamp;
-  };
-
-  const sortedContracts = useMemo(() => {
-    return [...contracts].sort((a, b) => {
-      const aSettled = isContractSettled(a);
-      const bSettled = isContractSettled(b);
-      if (aSettled !== bSettled) {
-        return aSettled ? 1 : -1;
-      }
-
-      const dateA = getContractDateValue(a);
-      const dateB = getContractDateValue(b);
-      if (dateA === dateB) {
-        return 0;
-      }
-      return dateB - dateA;
-    });
-  }, [contracts]);
+  // Note: frontend will rely on API ordering. Use `contracts` prop directly.
 
   const handleOpenPaymentSchedule = (contract: CreditContract) => {
     setSelectedContract(contract);
@@ -129,7 +112,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
               </tr>
             </thead>
             <tbody>
-              {sortedContracts.map((contract, index) => (
+              {contracts.map((contract, index) => (
                 <tr key={`tragop-table-${instanceId}-${startIndex}-${index}-${contract.MaHD || contract.id}`} className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-slate-50/50 hover:to-blue-50/30 transition-all duration-200">
                   <td className="p-4 text-slate-600 font-medium">{startIndex + index + 1}</td>
                   <td className="p-4">
@@ -140,6 +123,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                   </td>
                   <td className="p-4">
                     <div className="font-medium text-slate-800">{contract.HoTen || contract.ten_khach_hang}</div>
+                    <div className="text-xs text-slate-500">Thanh toán đến ngày: {lastDateLichSuTraLai(contract)}</div>
                   </td>
                   <td className="p-4">
                     <div className="text-sm text-slate-600">{contract.NgayVay}</div>
@@ -271,14 +255,15 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
         </div>
         {/* Mobile/Card view */}
         <div className="space-y-3 md:hidden">
-          {sortedContracts.map((contract, index) => (
+          {contracts.map((contract, index) => (
             <div key={`tragop-mobile-${instanceId}-${startIndex}-${index}-${contract.MaHD || contract.id}`} className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-xs text-slate-500">#{startIndex + index + 1} • {contract.MaHD || contract.ma_hop_dong}</div>
-                  <div className="font-semibold text-slate-800">{contract.HoTen || contract.ten_khach_hang}</div>
-                  <div className="text-xs text-slate-500 mt-1">Ngày vay: {contract.NgayVay}</div>
-                </div>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs text-slate-500">#{startIndex + index + 1} • {contract.MaHD || contract.ma_hop_dong}</div>
+                <div className="font-semibold text-slate-800">{contract.HoTen || contract.ten_khach_hang}</div>
+                <div className="text-xs text-slate-500 mt-1">Ngày vay: {contract.NgayVay}</div>
+                <div className="text-xs text-slate-500 mt-1">Thanh toán đến ngày: {lastDateLichSuTraLai(contract)}</div>
+              </div>
                 <Badge className={`${
                   (contract.TrangThai || '').includes('tất toán')
                     ? 'bg-emerald-100 text-emerald-700'
