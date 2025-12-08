@@ -263,7 +263,13 @@ def get_prefix_noi_dung(noi_dung: str, ky_so: int) -> str:
     if not noi_dung:
         return f"Trả lãi kỳ {ky_so}"
     # Lấy phần trước dấu | nếu có
-    prefix = noi_dung.split("|")[0].strip()
+    # prefix = noi_dung.split("|")[0].strip()
+    # lich_su_today.NoiDung = lich_su_today.NoiDung.split("|")[0].strip()  # Giữ lại phần trước dấu '|'
+    parts = [p.strip() for p in noi_dung.split("|")]
+    if len(parts) > 1:
+        prefix = " | ".join(parts[:-1]).strip()
+    else:
+        prefix = ""
     if not prefix:
         prefix = f"Trả lãi kỳ {ky_so}"
     return prefix
@@ -328,9 +334,9 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
         noi_dung_last_period = last_period.NoiDung if last_period else None
         if last_period:
             if "cộng dồn" in last_period.NoiDung:
-                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split(" ")[0])+1
+                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split(" ")[0])
             else:
-                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split("|")[0])+1
+                ky_so = int(last_period.NoiDung.split("lãi kỳ ")[1].split("|")[0])
         else:
             ky_so = 1
         # Xóa lịch sử của hợp đồng từ ngày hôm nay đến hết
@@ -726,18 +732,19 @@ def auto_create_lich_su(db: Session) -> dict:
         tra_gop_contracts = db.execute(select(TraGop).where(TraGop.TrangThai != "DA_TAT_TOAN")).scalars().all()
         # Xử lý Tín Chấp
         for contract in tin_chap_contracts:
-            # if "TC016" not in contract.MaHD:
-            #     continue
+            if "TC019" not in contract.MaHD:
+                continue
             ma_hd = contract.MaHD
             # Chuẩn hóa trạng thái ngày cho TẤT CẢ bản ghi theo date_now
             all_records_tc = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all()
+            noi_dung_ki_so = db.query(LichSuTraLai.NoiDung).filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.Ngay == date_now - timedelta(1)).first()
+            ky_so = int(noi_dung_ki_so[0].split("lãi kỳ ")[1].split(" ")[0])
             
             ky_dong = contract.KyDong
             if ky_dong == 1:
                 if (date_now.day - contract.NgayVay.day) % ky_dong != 0:
                     continue
             else:
-                print ((date_now.day - contract.NgayVay.day + 1) % ky_dong)
                 if (date_now.day - contract.NgayVay.day + 1) % ky_dong != 0:
                     continue
             for rec in all_records_tc:
@@ -1599,7 +1606,13 @@ def delete_thanh_toan(db: Session, ma_hd: str) -> dict:
                 lich_su_today.TrangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN.value
                 lich_su_today.TienDaTra = 0
                 lich_su_today.ThanhToan = False
-                lich_su_today.NoiDung = lich_su_today.NoiDung.split("|")[0].strip()  # Giữ lại phần trước dấu '|'
+                # lich_su_today.NoiDung = lich_su_today.NoiDung.split("|")[0].strip()  # Giữ lại phần trước dấu '|'
+                if lich_su_today.NoiDung:
+                    parts = [p.strip() for p in lich_su_today.NoiDung.split("|")]
+                    if len(parts) > 1:
+                        lich_su_today.NoiDung = " | ".join(parts[:-1]).strip()
+                    else:
+                        lich_su_today.NoiDung = ""
             
             lich_su_to_delete = db.query(LichSuTraLai).filter(
                 LichSuTraLai.MaHD == ma_hd,
@@ -1621,7 +1634,13 @@ def delete_thanh_toan(db: Session, ma_hd: str) -> dict:
                 lich_su_today.TrangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN.value
                 lich_su_today.TienDaTra = 0
                 lich_su_today.ThanhToan = False
-                lich_su_today.NoiDung = lich_su_today.NoiDung.split("|")[0].strip()  # Giữ lại phần trước dấu '|'
+                # lich_su_today.NoiDung = lich_su_today.NoiDung.split("|")[0].strip()  # Giữ lại phần trước dấu '|'
+                if lich_su_today.NoiDung:
+                    parts = [p.strip() for p in lich_su_today.NoiDung.split("|")]
+                    if len(parts) > 1:
+                        lich_su_today.NoiDung = " | ".join(parts[:-1]).strip()
+                    else:
+                        lich_su_today.NoiDung = ""
                 
                 
             lich_su_to_delete = db.query(LichSuTraLai).filter(
