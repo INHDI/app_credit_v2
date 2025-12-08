@@ -316,28 +316,23 @@ def update_tin_chap(db: Session, ma_hd: str, tin_chap_update: TinChapUpdate) -> 
             .first()
             is not None
         )
-        has_principal_payment = (db_tin_chap.SoTienTraGoc or 0) > 0
-        if (has_interest_payment or has_principal_payment) and any(
-            key != "HoTen" for key in update_data.keys()
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="Hợp đồng đã có thanh toán, chỉ được phép cập nhật Họ tên khách hàng.",
-            )
+        if has_interest_payment == False:
+            pass
+        else: 
+            has_principal_payment = (db_tin_chap.SoTienTraGoc or 0) > 0
+            if (has_interest_payment or has_principal_payment) and any(
+                key != "HoTen" for key in update_data.keys()
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Hợp đồng đã có thanh toán, chỉ được phép cập nhật Họ tên khách hàng.",
+                )
 
         for key, value in update_data.items():
             setattr(db_tin_chap, key, value)
         
         db.commit()
         db.refresh(db_tin_chap)
-        
-        # create_lich_su(db, 
-        #     ma_hd=ma_hd, 
-        #     ho_ten=db_tin_chap.HoTen, 
-        #     ngay= date.today(), 
-        #     so_tien=db_tin_chap.SoTienVay, 
-        #     hanh_dong="Cập nhật hợp đồng tín chấp", 
-        #     loai_hop_dong="TC")
         return db_tin_chap
         
     except Exception as e:

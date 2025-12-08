@@ -16,6 +16,7 @@ export interface ContractDetailData {
   statusColor: string;
   so_ky_tra?: number;
   GocConLai?: number;
+  ky_dong?: number;
 }
 
 export interface PaymentHistoryItem {

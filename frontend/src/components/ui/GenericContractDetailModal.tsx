@@ -57,10 +57,16 @@ export default function GenericContractDetailModal({
 
   // Kiểm tra xem hôm nay đã có thanh toán chưa
   const checkActionThanhToanLai = () => {
-    const today = new Date().toISOString().split('T')[0];
+    // const today = new Date().toISOString().split('T')[0];
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Ho_Chi_Minh',   // UTC+7
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
     // Lấy ra mảng các ngày lớn hơn ngày hôm nay
     let hasPaymentToday
-    if (contract?.ma_hop_dong.includes('TC') && Number(contract?.so_ky_tra) > 1 ) {
+    if (Number(contract?.ky_dong) > 1 ) {
       hasPaymentToday = paymentHistory
         .filter((item: any) => {
           const paymentDate = item.ngay_tra_lai || item.Ngay;
@@ -74,7 +80,6 @@ export default function GenericContractDetailModal({
         if (!hasPaymentToday) return false;
       return hasPaymentToday.SuaLichSu === true;
     }
-
     const paymentToday = paymentHistory.find((item: any) => {
       const paymentDate = item.ngay_tra_lai || item.Ngay;
       return paymentDate === today && item.ThanhToan === true;
@@ -94,7 +99,13 @@ export default function GenericContractDetailModal({
 
     setIsDeleting(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
+      // const today = new Date().toISOString().split('T')[0];
+      const today = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Ho_Chi_Minh',   // UTC+7
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
       const paymentToday = paymentHistory.find((item: any) => {
         const paymentDate = item.ngay_tra_lai || item.Ngay;
         return paymentDate === today && item.ThanhToan === true;
@@ -415,7 +426,7 @@ export default function GenericContractDetailModal({
         </Button>
         {!contract.status.includes("Đã tất toán") && (
           <>
-            {config.contractType === 'tin_chap' &&
+            {config.contractType === 'tin_chap' && paymentHistory.length !=0 && 
             <Button
               onClick={() => setPrincipalModalOpen(true)}
               className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg px-4 sm:px-8 text-sm flex-1 sm:flex-none"

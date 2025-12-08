@@ -59,6 +59,7 @@ export default function TraGopDetailModal({
         daily_interest: undefined,
         status: contract.TrangThai || 'Không xác định',
         so_ky_tra: contract.SoLanTra,
+        ky_dong: contract.KyDong,
         statusColor: (contract.TrangThai || '').includes('tất toán')
           ? 'bg-emerald-100 text-emerald-700'
           : (contract.TrangThai || '').includes('một phần')
