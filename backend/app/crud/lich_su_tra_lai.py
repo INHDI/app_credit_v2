@@ -274,6 +274,16 @@ def get_prefix_noi_dung(noi_dung: str, ky_so: int) -> str:
         prefix = f"Trả lãi kỳ {ky_so}"
     return prefix
 
+
+def format_amount(amount: Optional[int]) -> str:
+    """
+    Làm tròn số tiền đến hàng nghìn và format với dấu phân cách.
+    """
+    normalized = amount or 0
+    sign = 1 if normalized >= 0 else -1
+    rounded = int(((abs(normalized) + 500) // 1000) * 1000 * sign)
+    return f"{rounded:,}"
+
 def check_tat_toan_hop_dong(db: Session, ma_hd: str) -> bool:
     """
     Kiểm tra xem hợp đồng có tất toán không
@@ -353,7 +363,7 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
             if not period:
                 if is_first_period:
                     # Kỳ đầu tiên: ghi tổng số tiền thanh toán
-                    noi_dung = f"{get_prefix_noi_dung(noi_dung_last_period, ky_so)} |Sửa số tiền thanh toán: {tien_da_tra:,} VNĐ"
+                    noi_dung = f"{get_prefix_noi_dung(noi_dung_last_period, ky_so)} |Sửa số tiền thanh toán: {format_amount(tien_da_tra)} VNĐ"
                     period = LichSuTraLai(
                         MaHD=ma_hd,
                         Ngay=current_date,
@@ -492,7 +502,7 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
             db_lich_su_cong_don_lai.TienDaTra += nop_vao_ky
             tong_da_thanh_toan += nop_vao_ky
             so_tien_con_lai_de_phan_bo -= nop_vao_ky
-            db_lich_su_cong_don_lai.NoiDung = f"{get_prefix_noi_dung(noi_dung_last_period, ky_so)} |Sửa số tiền thanh toán: {tien_da_tra:,} VNĐ"
+            db_lich_su_cong_don_lai.NoiDung = f"{get_prefix_noi_dung(noi_dung_last_period, ky_so)} |Sửa số tiền thanh toán: {format_amount(tien_da_tra)} VNĐ"
 
             # Cập nhật trạng thái thanh toán kỳ
             if db_lich_su_cong_don_lai.TienDaTra >= db_lich_su_cong_don_lai.SoTien:
@@ -795,14 +805,14 @@ def auto_create_lich_su(db: Session) -> dict:
                 existing_today.TrangThaiNgayThanhToan = TrangThaiNgayThanhToan.DEN_HAN.value
                 existing_today.SuaLichSu = True
                 # Cập nhật NoiDung thể hiện cộng dồn
-                existing_today.NoiDung = f"Trả lãi kỳ {ky_so + 1} (cộng dồn {tong_tien_chua_tra})"
+                existing_today.NoiDung = f"Trả lãi kỳ {ky_so + 1} (cộng dồn {format_amount(tong_tien_chua_tra)})"
                 records_updated += 1
             else:
                 db_lich_su = LichSuTraLai(
                     MaHD=ma_hd,
                     Ngay=date_now,
                     SoTien=so_tien_ky_moi,
-                    NoiDung=f"Trả lãi kỳ {ky_so + 1} (cộng dồn {tong_tien_chua_tra})",
+                    NoiDung=f"Trả lãi kỳ {ky_so + 1} (cộng dồn {format_amount(tong_tien_chua_tra)})",
                     TrangThaiThanhToan=TrangThaiThanhToan.CHUA_THANH_TOAN.value,
                     TrangThaiNgayThanhToan=TrangThaiNgayThanhToan.DEN_HAN.value,
                     SuaLichSu=True,
@@ -874,7 +884,7 @@ def auto_create_lich_su(db: Session) -> dict:
                 # Cập nhật NoiDung
                 if "kỳ" in latest_ky.NoiDung:
                     ky_so = int(latest_ky.NoiDung.split('kỳ ')[1].split(' ')[0]) + 1
-                    check_ngay_dong_lai.NoiDung = f"Trả lãi kỳ {ky_so} (cộng dồn {tong_tien_chua_tra})"
+                    check_ngay_dong_lai.NoiDung = f"Trả lãi kỳ {ky_so} (cộng dồn {format_amount(tong_tien_chua_tra)})"
                 
                 records_updated += 1
             else:
@@ -902,7 +912,7 @@ def auto_create_lich_su(db: Session) -> dict:
                     MaHD=ma_hd,
                     Ngay=date_now,
                     SoTien=so_tien_ky_moi,
-                    NoiDung=f"Trả lãi kỳ {len(all_records_tg) + 1} (cộng dồn {tong_tien_chua_tra})",
+                    NoiDung=f"Trả lãi kỳ {len(all_records_tg) + 1} (cộng dồn {format_amount(tong_tien_chua_tra)})",
                     TrangThaiThanhToan=TrangThaiThanhToan.CHUA_THANH_TOAN.value,
                     TrangThaiNgayThanhToan=TrangThaiNgayThanhToan.DEN_HAN.value,
                     SuaLichSu=True,
@@ -961,9 +971,9 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
 
         # Cộng dồn nội dung cho bản ghi được chọn (STT)
         if "Số tiền thanh toán" in db_lich_su.NoiDung:
-            db_lich_su.NoiDung += f" + {so_tien:,} VNĐ"
+            db_lich_su.NoiDung += f" + {format_amount(so_tien)} VNĐ"
         else:
-            db_lich_su.NoiDung += f" |Số tiền thanh toán: {so_tien:,} VNĐ"
+            db_lich_su.NoiDung += f" |Số tiền thanh toán: {format_amount(so_tien)} VNĐ"
 
         while so_tien_con_lai_de_phan_bo > 0:
             # Tìm hoặc tạo bản ghi cho current_date
@@ -980,7 +990,7 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
                         MaHD=ma_hd,
                         Ngay=current_date,
                         SoTien=daily_interest,
-                        NoiDung=f"Số tiền thanh toán: {so_tien}",
+                        NoiDung=f"Số tiền thanh toán: {format_amount(so_tien)}",
                         TrangThaiThanhToan=TrangThaiThanhToan.CHUA_THANH_TOAN.value,
                         TrangThaiNgayThanhToan=(
                             TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
@@ -1035,10 +1045,10 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
                     # Các kỳ sau: cộng dồn nội dung thanh toán
                     if "Số tiền thanh toán" in period.NoiDung:
                         # Đã có ghi chú thanh toán trước đó, cộng dồn
-                        period.NoiDung += f" + {nop_vao_ky:,} VNĐ"
+                        period.NoiDung += f" + {format_amount(nop_vao_ky)} VNĐ"
                     else:
                         # Chưa có ghi chú thanh toán, tạo mới
-                        period.NoiDung = f"Số tiền thanh toán: {nop_vao_ky:,} VNĐ"
+                        period.NoiDung = f"Số tiền thanh toán: {format_amount(nop_vao_ky)} VNĐ"
                 
 
             # Nếu kỳ đã đóng đủ thì tiến sang ngày kế tiếp theo KyDong
@@ -1059,9 +1069,9 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
         
         # Cộng dồn nội dung cho bản ghi được chọn (STT) - Trả Góp
         if "Số tiền thanh toán" in db_lich_su.NoiDung:
-            db_lich_su.NoiDung += f" + {so_tien:,} VNĐ"
+            db_lich_su.NoiDung += f" + {format_amount(so_tien)} VNĐ"
         else:
-            db_lich_su.NoiDung += f" |Số tiền thanh toán: {so_tien:,} VNĐ"
+            db_lich_su.NoiDung += f" |Số tiền thanh toán: {format_amount(so_tien)} VNĐ"
         
         future_periods: List[LichSuTraLai] = (
             db.query(LichSuTraLai)
@@ -1103,10 +1113,10 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
                 is_first_period = False
             else:
                 # Các kỳ sau: cộng dồn nội dung thanh toán
-                noi_dung_lai = f"Số tiền thanh toán: {nop_vao_ky:,} VNĐ"
+                noi_dung_lai = f"Số tiền thanh toán: {format_amount(nop_vao_ky)} VNĐ"
                 if "Số tiền thanh toán" in period.NoiDung:
                     # Đã có ghi chú thanh toán trước đó, cộng dồn
-                    period.NoiDung += f" + {nop_vao_ky:,} VNĐ"
+                    period.NoiDung += f" + {format_amount(nop_vao_ky)} VNĐ"
                 else:
                     # Chưa có ghi chú thanh toán, tạo mới
                     period.NoiDung += f" |{noi_dung_lai}"
@@ -1209,9 +1219,9 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
         if len(data_db_lich_su) != 0:
             current_date = data_db_lich_su[0].Ngay
             if "Số tiền thanh toán" in data_db_lich_su[0].NoiDung:
-                data_db_lich_su[0].NoiDung += f" + {so_tien:,} VNĐ"
+                data_db_lich_su[0].NoiDung += f" + {format_amount(so_tien)} VNĐ"
             else:
-                data_db_lich_su[0].NoiDung += f" |Số tiền thanh toán: {so_tien:,} VNĐ"
+                data_db_lich_su[0].NoiDung += f" |Số tiền thanh toán: {format_amount(so_tien)} VNĐ"
         else:
             current_date = contract.NgayVay + timedelta(days=ky_dong_days)
 
@@ -1230,7 +1240,7 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
                         MaHD=ma_hd,
                         Ngay=current_date,
                         SoTien=daily_interest,
-                        NoiDung=f"Trả lãi kỳ {ky_so} |Số tiền thanh toán: {so_tien}",
+                        NoiDung=f"Trả lãi kỳ {ky_so} |Số tiền thanh toán: {format_amount(so_tien)}",
                         TrangThaiThanhToan=TrangThaiThanhToan.CHUA_THANH_TOAN.value,
                         TrangThaiNgayThanhToan=(
                             TrangThaiNgayThanhToan.CHUA_DEN_HAN.value
@@ -1316,12 +1326,12 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
 
             if "Số tiền thanh toán" in db_lich_su_cong_don_lai.NoiDung:
                 if date.today().isoformat() in db_lich_su_cong_don_lai.NoiDung:
-                    db_lich_su_cong_don_lai.NoiDung += f" + {so_tien:,} VNĐ"
+                    db_lich_su_cong_don_lai.NoiDung += f" + {format_amount(so_tien)} VNĐ"
                 else:
-                    db_lich_su_cong_don_lai.NoiDung += f"| Số tiền thanh toán: {so_tien:,} VNĐ"
+                    db_lich_su_cong_don_lai.NoiDung += f"| Số tiền thanh toán: {format_amount(so_tien)} VNĐ"
             else:
                 if is_first_period != False:
-                    db_lich_su_cong_don_lai.NoiDung += f"| Số tiền thanh toán: {so_tien:,} VNĐ"
+                    db_lich_su_cong_don_lai.NoiDung += f"| Số tiền thanh toán: {format_amount(so_tien)} VNĐ"
                     db_lich_su_cong_don_lai.ThanhToan = True
                     db_lich_su_cong_don_lai.SuaLichSu = True
 
@@ -1349,7 +1359,7 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
                 noi_dung_lai = f"Lãi đã được trả vào ngày {date.today().isoformat()}"
                 if "Số tiền thanh toán" in db_lich_su_cong_don_lai.NoiDung:
                     # Đã có ghi chú thanh toán trước đó, cộng dồn
-                    db_lich_su_cong_don_lai.NoiDung += f" + {nop_vao_ky:,} VNĐ"
+                    db_lich_su_cong_don_lai.NoiDung += f" + {format_amount(nop_vao_ky)} VNĐ"
                 else:
                     # Chưa có ghi chú thanh toán, tạo mới
                     db_lich_su_cong_don_lai.NoiDung += f" |{noi_dung_lai}"
@@ -1498,7 +1508,7 @@ def tat_toan_hop_dong(db: Session, ma_hd: str, tien_lai: int = 0) -> dict:
                     )
                     # Cập nhật nội dung cộng dồn
                     if period.NoiDung and "Số tiền thanh toán" in period.NoiDung:
-                        period.NoiDung += f" + {nop_vao_ky:,} VNĐ"
+                        period.NoiDung += f" + {format_amount(nop_vao_ky)} VNĐ"
                     else:
                         # period.NoiDung = (period.NoiDung or "") + f" |Số tiền thanh toán: {nop_vao_ky:,} VNĐ"
                         period.NoiDung = (period.NoiDung or "")
@@ -1534,9 +1544,9 @@ def tat_toan_hop_dong(db: Session, ma_hd: str, tien_lai: int = 0) -> dict:
         
         if db_lich_su_tra_lai_today:
             if loai == "TC":
-                noi_dung_tat_toan = f'''Tất toán: [Tiền Gốc: {tien_con_lai:,} VNĐ & Tiền lãi: {tien_lai:,} VNĐ] | {db_lich_su_tra_lai_today.NoiDung}'''
+                noi_dung_tat_toan = f'''Tất toán: [Tiền Gốc: {format_amount(tien_con_lai)} VNĐ & Tiền lãi: {format_amount(tien_lai)} VNĐ] | {db_lich_su_tra_lai_today.NoiDung}'''
             else:
-                noi_dung_tat_toan = f"Tất toán: {tien_lai:,} VNĐ | {db_lich_su_tra_lai_today.NoiDung}"
+                noi_dung_tat_toan = f"Tất toán: {format_amount(tien_lai)} VNĐ | {db_lich_su_tra_lai_today.NoiDung}"
             db_lich_su_tra_lai_today.NoiDung = noi_dung_tat_toan
 
         db.commit()
