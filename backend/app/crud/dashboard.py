@@ -107,6 +107,7 @@ def get_dashboard(db: Session, time_period: str = "all") -> DashboardResponse:
         tien_da_tra = sum(ls.TienDaTra for ls in lich_sus)
         tien_phai_tra = sum(ls.SoTien for ls in lich_sus)
         tc_tien_da_thu += tien_da_tra
+        tc_tien_da_thu += tc.SoTienTraGoc
         tc_tien_no_can_tra += max(0, tien_phai_tra - tien_da_tra)
         tong_no += tien_phai_tra
     # Calculate Trả Góp statistics
@@ -130,24 +131,30 @@ def get_dashboard(db: Session, time_period: str = "all") -> DashboardResponse:
     tong_tien_can_thu = tong_no + tc_tien_cho_vay
     
     # Count contracts with debt (no_phai_thu)
-    # no_phai_thu_count = 0
-    # for tc in tin_chaps:
-    #     lich_sus = db.query(LichSuTraLai).filter(
-    #         LichSuTraLai.MaHD == tc.MaHD).all()
-    #     if any(ls.SoTien > ls.TienDaTra for ls in lich_sus):
-    #         no_phai_thu_count += 1
     
-    # for tg in tra_gops:
-    #     lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == tg.MaHD).all()
-    #     if any(ls.SoTien > ls.TienDaTra for ls in lich_sus):
-    #         no_phai_thu_count += 1
-    no_phai_thu_count = db.query(LichSuTraLai).filter(
-        or_(
-            LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.CHUA_THANH_TOAN.value,
-            LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
-        ),
-        LichSuTraLai.TrangThaiNgayThanhToan == TrangThaiNgayThanhToan.DEN_HAN.value
-    ).distinct().count()
+    no_phai_thu_count = 0
+    for tc in tin_chaps:
+        if tc.TrangThai == TrangThaiThanhToan.DA_TAT_TOAN.value:
+            continue
+        lich_sus = db.query(LichSuTraLai).filter(
+            LichSuTraLai.MaHD == tc.MaHD).all()
+        if any(ls.SoTien > ls.TienDaTra for ls in lich_sus):
+            no_phai_thu_count += 1
+    
+    for tg in tra_gops:
+        if tg.TrangThai == TrangThaiThanhToan.DA_TAT_TOAN.value:
+            continue
+        lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == tg.MaHD).all()
+        if any(ls.SoTien > ls.TienDaTra for ls in lich_sus):
+            no_phai_thu_count += 1
+    
+    # no_phai_thu_count = db.query(LichSuTraLai).filter(
+    #     or_(
+    #         LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.CHUA_THANH_TOAN.value,
+    #         LichSuTraLai.TrangThaiThanhToan == TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
+    #     ),
+    #     LichSuTraLai.TrangThaiNgayThanhToan == TrangThaiNgayThanhToan.DEN_HAN.value
+    # ).distinct().count()
     
     # Calculate ti_le_lai_thu (% đã thu / chưa thu)
     tong_phai_thu = tong_tien_da_thu + tong_tien_can_thu
@@ -199,7 +206,7 @@ def get_dashboard(db: Session, time_period: str = "all") -> DashboardResponse:
     return DashboardResponse(
         tong_hop_dong=tong_hop_dong,
         tong_tien_da_thu=tong_tien_da_thu,
-        tong_tien_can_thu=tong_tien_can_thu,
+        tong_tien_can_thu= tc_tien_no_can_tra + tg_tien_no_can_tra,
         no_phai_thu=no_phai_thu_count,
         loai_hinh_vay=loai_hinh_vay,
         ti_le_lai_thu=ti_le_lai_thu,

@@ -1542,7 +1542,7 @@ def tat_toan_hop_dong(db: Session, ma_hd: str, tien_lai: int = 0) -> dict:
         tien_con_lai = 0  # Initialize for TG case
         if loai == "TC":
             tien_con_lai = contract.SoTienVay - contract.SoTienTraGoc
-            contract.SoTienTraGoc = tien_con_lai
+            contract.SoTienTraGoc = contract.SoTienVay
 
         # 5. Cập nhật nội dung lịch sử hôm nay
         db_lich_su_tra_lai_today = db.query(LichSuTraLai).filter(
