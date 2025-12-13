@@ -3,8 +3,8 @@
 import Modal from "@/components/ui/Modal";
 import PaymentsList from "@/components/ui/PaymentsList";
 import PaymentModal from "@/components/ui/PaymentModal";
-import { useState } from "react";
-import { payInterestByRecord } from "@/services/paymentApi";
+import { useState, useCallback, useEffect } from "react";
+import { payInterestByRecord, getPaymentHistoryByContract } from "@/services/paymentApi";
 import { CalendarDays } from "lucide-react";
 
 interface NoPhaiThuDetailModalProps {
@@ -17,7 +17,7 @@ interface NoPhaiThuDetailModalProps {
 export default function NoPhaiThuDetailModal({ isOpen, onClose, contract, onRefresh }: NoPhaiThuDetailModalProps) {
   if (!isOpen || !contract) return null;
 
-  const items = Array.isArray(contract.raw?.LichSuTraLai) ? contract.raw.LichSuTraLai : [];
+  const fallbackHistory = Array.isArray(contract.raw?.LichSuTraLai) ? contract.raw.LichSuTraLai : [];
   let tienCanThanhToanTheoKy = 0;
   if (contract.ma_hop_dong.startsWith("TC")) {
     tienCanThanhToanTheoKy = contract?.tien_can_tra_theo_ky;
@@ -27,13 +27,36 @@ export default function NoPhaiThuDetailModal({ isOpen, onClose, contract, onRefr
 
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<{ id: number; amount: number } | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>(fallbackHistory);
+
+  const fetchPaymentHistory = useCallback(async () => {
+    if (!contract?.ma_hop_dong) return;
+    try {
+      const response = await getPaymentHistoryByContract(contract.ma_hop_dong);
+      const data = Array.isArray(response?.data) ? response.data : [];
+      if (data.length > 0) {
+        setPaymentHistory(data);
+        return;
+      }
+    } catch (error) {
+      console.error("Error fetching NoPhaiThu payment history:", error);
+    }
+    setPaymentHistory(fallbackHistory);
+  }, [contract?.ma_hop_dong, fallbackHistory]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchPaymentHistory();
+    }
+  }, [isOpen, fetchPaymentHistory]);
 
   const handleOpenPayment = (id: number, amount: number) => {
     setSelectedPayment({ id, amount });
     setPaymentModalOpen(true);
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
+    await fetchPaymentHistory();
     if (onRefresh) onRefresh();
   };
 
@@ -58,7 +81,7 @@ export default function NoPhaiThuDetailModal({ isOpen, onClose, contract, onRefr
             <PaymentsList 
               contractId={contract.ma_hop_dong}
               contractStatus={contract.raw?.TrangThai || ''}
-              items={items}
+              items={paymentHistory}
               onPayClick={(id, remain) => handleOpenPayment(Number(id), remain)}
               disablePayWhen={(p) => p.TrangThaiNgayThanhToan === 'Quá hạn' || p.TrangThaiNgayThanhToan === 'Quá kỳ đóng lãi'}
               onEditSuccess={handlePaymentSuccess}
@@ -83,5 +106,3 @@ export default function NoPhaiThuDetailModal({ isOpen, onClose, contract, onRefr
     </>
   );
 }
-
-

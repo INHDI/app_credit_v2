@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/utils/formatters";
 import { CheckCircle, FileText, Calculator } from "lucide-react";
-import { payFullByContract } from "@/services/paymentApi";
+import { payFullByContract, getPaymentHistoryByContract } from "@/services/paymentApi";
 
 interface PaymentHistoryItem {
   id: string;
@@ -50,51 +50,45 @@ export default function SettleConfirmModal({
   // Số tiền lãi user nhập (raw, chỉ số)
   const [interestInput, setInterestInput] = useState<string>("");
 
-  // 1) Load paymentHistory vào items khi mở modal
-  useEffect(() => {
-    if (!isOpen || !maHopDong) return;
+  const mapHistoryItems = (source: any[] = []): PaymentHistoryItem[] =>
+    source.map((item: any) => ({
+      id: `${maHopDong || item.MaHD || "contract"}-${item.Stt}`,
+      thoi_gian: item.Ngay,
+      so_tien: item.SoTien,
+      so_tien_tra: item.TienDaTra || 0,
+      trang_thai:
+        item.TrangThaiThanhToan === "Đóng đủ" ||
+        item.TrangThaiThanhToan === "Đã tất toán",
+      noi_dung: item.NoiDung,
+    }));
 
+  const loadHistory = useCallback(async () => {
+    if (!maHopDong) {
+      setItems([]);
+      return;
+    }
     setHistoryLoading(true);
+    const fallback = Array.isArray(paymentHistory) ? paymentHistory : [];
     try {
-      if (paymentHistory && Array.isArray(paymentHistory)) {
-        const mappedItems: PaymentHistoryItem[] = paymentHistory.map(
-          (item: any) => ({
-            id: `${maHopDong}-${item.Stt}`,
-            thoi_gian: item.Ngay,
-            so_tien: item.SoTien,
-            so_tien_tra: item.TienDaTra || 0,
-            trang_thai:
-              item.TrangThaiThanhToan === "Đóng đủ" ||
-              item.TrangThaiThanhToan === "Đã tất toán",
-            noi_dung: item.NoiDung,
-          })
-        );
-        setItems(mappedItems);
-      } else {
-        // Fallback mock cho tín chấp
-        const base = new Date();
-        base.setHours(0, 0, 0, 0);
-        const mock = Array.from({ length: 8 }, (_, i) => {
-          const d = new Date(base);
-          d.setMonth(base.getMonth() - 2 + i);
-          const so_tien = Math.round(1200000 + Math.random() * 1200000);
-          const so_tien_tra =
-            Math.random() > 0.6 ? Math.round(so_tien * Math.random()) : 0;
-          return {
-            id: `${maHopDong}-${i + 1}`,
-            thoi_gian: d.toISOString(),
-            so_tien,
-            so_tien_tra,
-            trang_thai: so_tien_tra >= so_tien,
-            noi_dung: `Kỳ ${i + 1} hợp đồng ${maHopDong}`,
-          } as PaymentHistoryItem;
-        });
-        setItems(mock);
+      const response = await getPaymentHistoryByContract(maHopDong);
+      const data = Array.isArray(response?.data) ? response.data : [];
+      if (data.length > 0) {
+        setItems(mapHistoryItems(data));
+        return;
       }
+    } catch (error) {
+      console.error("Error fetching payment history for settlement:", error);
     } finally {
       setHistoryLoading(false);
     }
-  }, [isOpen, maHopDong, paymentHistory]);
+    setItems(mapHistoryItems(fallback));
+  }, [maHopDong, paymentHistory]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadHistory();
+    }
+  }, [isOpen, loadHistory]);
 
   // 2) Tính unpaid, interestAmount từ items
   const unpaid = useMemo(

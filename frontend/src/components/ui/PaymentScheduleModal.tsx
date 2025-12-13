@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/Modal";
 import { formatCurrency } from "@/utils/formatters";
@@ -10,6 +10,7 @@ import {
   CheckCircle,
   ArrowRight
 } from 'lucide-react';
+import { getPaymentHistoryByContract } from "@/services/paymentApi";
 
 interface PaymentHistoryItem {
   id: string;
@@ -47,62 +48,66 @@ export default function PaymentScheduleModal({
   const [loading, setLoading] = useState(false);
   const [contractInfo, setContractInfo] = useState<any>(null);
 
-  // Load payment schedule from contract data
-  useEffect(() => {
-    if (!isOpen) return;
+  const mapHistoryItems = useCallback((source: any[] = []): PaymentHistoryItem[] => {
+    return source.map((item: any) => ({
+      id: `${contract?.MaHD || contract?.ma_hop_dong}-${item.Stt}`,
+      thoi_gian: item.Ngay,
+      so_tien: item.SoTien,
+      so_tien_tra: item.TienDaTra || 0,
+      trang_thai: item.TrangThaiThanhToan === 'Đóng đủ' || item.TrangThaiThanhToan === 'Đã tất toán',
+      noi_dung: item.NoiDung,
+      Stt: item.Stt,
+      MaHD: item.MaHD,
+      Ngay: item.Ngay,
+      SoTien: item.SoTien,
+      NoiDung: item.NoiDung,
+      TrangThaiThanhToan: item.TrangThaiThanhToan,
+      TrangThaiNgayThanhToan: item.TrangThaiNgayThanhToan,
+      TienDaTra: item.TienDaTra,
+    }));
+  }, [contract?.MaHD, contract?.ma_hop_dong]);
+
+  const loadPaymentSchedule = useCallback(async () => {
     if (!contract?.MaHD && !contract?.ma_hop_dong) return;
     setLoading(true);
+    const fallback = Array.isArray(contract?.LichSuTraLai) ? contract.LichSuTraLai : [];
     try {
-      // Set contract info
       setContractInfo({
         ma_hop_dong: contract.MaHD || contract.ma_hop_dong,
         ten_khach_hang: contract.HoTen || contract.ten_khach_hang,
       });
-
-      // Process LichSuTraLai from contract data
-      if (contract.LichSuTraLai && Array.isArray(contract.LichSuTraLai)) {
-        const items: PaymentHistoryItem[] = contract.LichSuTraLai.map((item: any) => ({
-          id: `${contract.MaHD || contract.ma_hop_dong}-${item.Stt}`,
-          thoi_gian: item.Ngay,
-          so_tien: item.SoTien,
-          so_tien_tra: item.TienDaTra || 0,
-          trang_thai: item.TrangThaiThanhToan === 'Đóng đủ' || item.TrangThaiThanhToan === 'Đã tất toán',
-          noi_dung: item.NoiDung,
-          // Keep original Tra Gop fields
-          Stt: item.Stt,
-          MaHD: item.MaHD,
-          Ngay: item.Ngay,
-          SoTien: item.SoTien,
-          NoiDung: item.NoiDung,
-          TrangThaiThanhToan: item.TrangThaiThanhToan,
-          TrangThaiNgayThanhToan: item.TrangThaiNgayThanhToan,
-          TienDaTra: item.TienDaTra,
-        }));
-        setPaymentHistory(items);
-
-        // Find next payment - prioritize "Chưa đến hạn" status
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const nextPaymentItem = items
-          .filter((item) => {
-            const paymentDate = new Date(item.thoi_gian);
-            paymentDate.setHours(0, 0, 0, 0);
-            return paymentDate >= today && item.so_tien_tra < item.so_tien;
-          })
-          .filter((item) => item.TrangThaiNgayThanhToan === 'Chưa đến hạn')
-          .sort((a, b) => new Date(a.thoi_gian).getTime() - new Date(b.thoi_gian).getTime())[0] || null;
-        
-        setNextPayment(nextPaymentItem);
-      } else {
-        // Fallback to empty data
-        setPaymentHistory([]);
-        setNextPayment(null);
+      const maHD = contract.MaHD || contract.ma_hop_dong;
+      let data: any[] = [];
+      try {
+        const response = await getPaymentHistoryByContract(maHD);
+        data = Array.isArray(response?.data) ? response.data : [];
+      } catch (error) {
+        console.error("Error fetching payment schedule:", error);
       }
+      const items = mapHistoryItems(data.length > 0 ? data : fallback);
+      setPaymentHistory(items);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const nextPaymentItem = items
+        .filter((item) => {
+          const paymentDate = new Date(item.thoi_gian);
+          paymentDate.setHours(0, 0, 0, 0);
+          return paymentDate >= today && item.so_tien_tra < item.so_tien;
+        })
+        .filter((item) => item.TrangThaiNgayThanhToan === 'Chưa đến hạn')
+        .sort((a, b) => new Date(a.thoi_gian).getTime() - new Date(b.thoi_gian).getTime())[0] || null;
+      setNextPayment(nextPaymentItem);
     } finally {
       setLoading(false);
     }
-  }, [isOpen, contract?.MaHD, contract?.ma_hop_dong, contract?.HoTen, contract?.ten_khach_hang, contract?.LichSuTraLai]);
+  }, [contract, mapHistoryItems]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadPaymentSchedule();
+    }
+  }, [isOpen, loadPaymentSchedule]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
