@@ -54,6 +54,18 @@ async def delete_thanh_toan(
     result = crud_lich_su.delete_thanh_toan(db=db, ma_hd=ma_hd)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
+
+    await broadcast_lich_su_tra_lai_event(
+        manager=manager,
+        event_type=EventType.LICH_SU_TRA_LAI_DELETED,
+        lich_su_data={"ma_hd": ma_hd, "result": result},
+        message=f"Xóa thanh toán lãi ngày hiện tại cho hợp đồng {ma_hd}"
+    )
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "delete_payment", "ma_hd": ma_hd},
+        message="Dashboard cần cập nhật sau khi xóa thanh toán"
+    )
     return ApiResponse.success_response(data=result, message="Xóa thanh toán lịch sử trả lãi thành công")
 
 
@@ -244,5 +256,16 @@ async def update_lich_su(
     result = crud_lich_su.update_lich_su(db=db, ma_hd=ma_hd, tien_da_tra=tien_da_tra)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
-    
+
+    await broadcast_lich_su_tra_lai_event(
+        manager=manager,
+        event_type=EventType.LICH_SU_TRA_LAI_UPDATED,
+        lich_su_data={"ma_hd": ma_hd, "tien_da_tra": tien_da_tra, "result": result},
+        message=f"Cập nhật số tiền đã trả cho hợp đồng {ma_hd}"
+    )
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "update_payment", "ma_hd": ma_hd, "amount": tien_da_tra},
+        message="Dashboard cần cập nhật sau khi sửa thanh toán"
+    )
     return ApiResponse.success_response(data=result, message="Cập nhật lịch sử trả lãi thành công")

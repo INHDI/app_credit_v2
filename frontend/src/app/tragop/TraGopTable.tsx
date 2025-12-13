@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -90,6 +90,17 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
     setShowEdit(false);
     setSelectedForEdit(null);
   };
+
+  useEffect(() => {
+    if (!selectedForDetail) return;
+    const currentId = selectedForDetail.MaHD || selectedForDetail.ma_hop_dong;
+    const updated = contracts.find(
+      (contract) => (contract.MaHD || contract.ma_hop_dong) === currentId
+    );
+    if (updated && updated !== selectedForDetail) {
+      setSelectedForDetail(updated);
+    }
+  }, [contracts, selectedForDetail?.MaHD, selectedForDetail?.ma_hop_dong]);
 
   return (
     <TooltipProvider>
@@ -422,5 +433,4 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
     </TooltipProvider>
   );
 }
-
 

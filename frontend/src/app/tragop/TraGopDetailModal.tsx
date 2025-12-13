@@ -1,11 +1,12 @@
 "use client";
 
+import { useCallback } from "react";
 import GenericContractDetailModal from '@/components/ui/GenericContractDetailModal';
 import { getContractDetailConfig } from '@/config/contractDetailConfigs';
 import { ContractDetailType } from '@/types/contractDetail';
 import { ContractDetailData, PaymentHistoryItem } from '@/types/contractDetail';
 import type { CreditContract as TraGopContract } from '@/hooks/useTraGop';
-import { payInterestByContract } from '@/services/paymentApi';
+import { payInterestByContract, getPaymentHistoryByContract } from '@/services/paymentApi';
 import { useWebSocketEvents } from '@/hooks/useWebSocket';
 import { WebSocketEventType } from '@/types/websocket';
 // import { getTraLaiByContract, processPayment } from '@/apis/traLaiTraGop-api';
@@ -68,33 +69,39 @@ export default function TraGopDetailModal({
       }
     : null;
 
-  // Load payment history for Tra Gop (prefer data from contract if available)
-  const loadPaymentHistory = async (maHopDong: string): Promise<PaymentHistoryItem[]> => {
+  const mapHistoryItems = (items: any[] = []): PaymentHistoryItem[] =>
+    items.map((item: any) => ({
+      id: item.Stt,
+      ngay_tra_lai: item.Ngay,
+      so_tien_lai: item.SoTien,
+      so_tien_tra: item.TienDaTra,
+      trang_thai: item.TrangThaiThanhToan,
+      TrangThaiThanhToan: item.TrangThaiThanhToan,
+      TrangThaiNgayThanhToan: item.TrangThaiNgayThanhToan,
+      ghi_chu: item.NoiDung,
+      NoiDung: item.NoiDung,
+      created_at: item.created_at,
+      ThanhToan: item.ThanhToan,
+      SuaLichSu: item.SuaLichSu,
+    }));
+
+  // Load payment history cho Trả góp: ưu tiên gọi API, fallback về data đính kèm hợp đồng
+  const loadPaymentHistory = useCallback(async (maHopDong: string): Promise<PaymentHistoryItem[]> => {
     try {
-      if (contract?.LichSuTraLai && Array.isArray(contract.LichSuTraLai)) {
-        return contract.LichSuTraLai.map((item: any) => ({
-          id: item.Stt,
-          ngay_tra_lai: item.Ngay,
-          so_tien_lai: item.SoTien,
-          so_tien_tra: item.TienDaTra,
-          trang_thai: item.TrangThaiThanhToan,
-          // Provide both camel and snake/alt keys for Generic modal compatibility
-          TrangThaiThanhToan: item.TrangThaiThanhToan,
-          TrangThaiNgayThanhToan: item.TrangThaiNgayThanhToan,
-          ghi_chu: item.NoiDung,
-          NoiDung: item.NoiDung, // Add NoiDung field for PaymentsList component
-          created_at: undefined,
-          ThanhToan: item.ThanhToan, // Add ThanhToan field for PaymentsList component
-          SuaLichSu: item.SuaLichSu, // Add SuaLichSu field for PaymentsList component
-        }));
+      const response = await getPaymentHistoryByContract(maHopDong);
+      const raw = Array.isArray(response?.data) ? response.data : [];
+      if (raw.length > 0) {
+        return mapHistoryItems(raw);
       }
-      // TODO: fallback to API when needed
-      return [];
     } catch (error) {
       console.error('Error loading Tra Gop payment history:', error);
-      return [];
     }
-  };
+
+    if (contract?.LichSuTraLai && Array.isArray(contract.LichSuTraLai)) {
+      return mapHistoryItems(contract.LichSuTraLai);
+    }
+    return [];
+  }, [contract?.LichSuTraLai]);
 
   // Process payment for Tra Gop
   const processTraGopPayment = async (maHD: string, amount: number): Promise<void> => {

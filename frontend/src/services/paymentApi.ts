@@ -88,4 +88,16 @@ export async function deletePaymentToday(maHD: string): Promise<BasicApiResponse
   return await resp.json();
 }
 
+// GET /lich-su-tra-lai/contract/{maHD}
+export async function getPaymentHistoryByContract(maHD: string): Promise<BasicApiResponse<any[]>> {
+  const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/contract/${maHD}`;
+  const resp = await fetch(url, {
+    method: 'GET',
+    headers: API_HEADERS.JSON_ACCEPT,
+  });
+  if (!resp.ok) {
+    throw new Error(`HTTP ${resp.status}`);
+  }
+  return await resp.json();
+}
 

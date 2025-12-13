@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -77,6 +77,18 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
     setShowEdit(false);
     setSelectedForEdit(null);
   };
+
+  // Đồng bộ bản ghi đang xem chi tiết khi danh sách hợp đồng được refresh (qua onSettled/WebSocket)
+  useEffect(() => {
+    if (!selectedForDetail) return;
+    const currentId = selectedForDetail.MaHD || selectedForDetail.ma_hop_dong;
+    const updated = contracts.find(
+      (c) => (c.MaHD || c.ma_hop_dong) === currentId
+    );
+    if (updated && updated !== selectedForDetail) {
+      setSelectedForDetail(updated);
+    }
+  }, [contracts, selectedForDetail?.MaHD, selectedForDetail?.ma_hop_dong]);
 
 
   return (

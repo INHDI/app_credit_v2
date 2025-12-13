@@ -8,7 +8,7 @@ import { payInterestByRecord } from "@/services/paymentApi";
 import { getDueStatusClass, getPayStatusClass, getRowHighlightClass } from "@/utils/statusHelpers";
 import NoPhaiThuDetailModal from "./NoPhaiThuDetailModal";
 import SettleConfirmModal from "@/components/ui/SettleConfirmModal";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 interface NoPhaiThuContract {
   id: string;
@@ -45,6 +45,17 @@ export default function NoPhaiThuTable({
   const [showSettleModal, setShowSettleModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<{ id: number; amount: number } | null>(null);
+
+  // Khi danh sách hợp đồng thay đổi (sau khi BE trả về dữ liệu mới), đồng bộ lại hợp đồng đang xem chi tiết
+  useEffect(() => {
+    if (!selectedContract) return;
+    const updated = contracts.find(
+      (contract) => contract.ma_hop_dong === selectedContract.ma_hop_dong
+    );
+    if (updated && updated !== selectedContract) {
+      setSelectedContract(updated);
+    }
+  }, [contracts, selectedContract?.ma_hop_dong]);
 
   const handlePaymentClick = (contract: NoPhaiThuContract) => {
     setSelectedContract(contract);
@@ -432,6 +443,7 @@ export default function NoPhaiThuTable({
         isOpen={showDetailModal}
         onClose={() => { setShowDetailModal(false); setSelectedContract(null); }}
         contract={selectedContract as any}
+        onRefresh={onRefresh}
       />
     </TooltipProvider>
   );

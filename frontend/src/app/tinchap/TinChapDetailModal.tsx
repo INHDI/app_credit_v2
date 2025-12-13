@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CreditContract } from "@/hooks/useTinChap";
 // import { getTraLaiByContract } from '@/apis/traLaiTinChap-api';
 // import { TraLaiTinChapResponse } from '@/models/tinChap';
-import { payInterestByContract } from '@/services/paymentApi';
+import { payInterestByContract, getPaymentHistoryByContract } from '@/services/paymentApi';
 import { useWebSocketEvents } from '@/hooks/useWebSocket';
 import { WebSocketEventType } from '@/types/websocket';
 import GenericContractDetailModal from "@/components/ui/GenericContractDetailModal";
@@ -69,32 +69,38 @@ export default function TinChapDetailModal({
       }
     : null;
   // Load payment history for Tin Chap (prefer data from contract if available)
-  const loadPaymentHistory = async (maHopDong: string): Promise<PaymentHistoryItem[]> => {
+  const mapHistoryItems = (items: any[] = []): PaymentHistoryItem[] =>
+    items.map((item: any) => ({
+      id: item.Stt,
+      ngay_tra_lai: item.Ngay,
+      so_tien_lai: item.SoTien,
+      so_tien_tra: item.TienDaTra,
+      trang_thai: item.TrangThaiThanhToan,
+      TrangThaiThanhToan: item.TrangThaiThanhToan,
+      TrangThaiNgayThanhToan: item.TrangThaiNgayThanhToan,
+      ghi_chu: item.NoiDung,
+      NoiDung: item.NoiDung,
+      created_at: item.created_at,
+      ThanhToan: item.ThanhToan,
+      SuaLichSu: item.SuaLichSu,
+    }));
+
+  const loadPaymentHistory = useCallback(async (maHopDong: string): Promise<PaymentHistoryItem[]> => {
     try {
-      if (contract?.LichSuTraLai && Array.isArray(contract.LichSuTraLai)) {
-        return contract.LichSuTraLai.map((item: any) => ({
-          id: item.Stt,
-          ngay_tra_lai: item.Ngay,
-          so_tien_lai: item.SoTien,
-          so_tien_tra: item.TienDaTra,
-          trang_thai: item.TrangThaiThanhToan,
-          // Provide both camel and snake/alt keys for Generic modal compatibility
-          TrangThaiThanhToan: item.TrangThaiThanhToan,
-          TrangThaiNgayThanhToan: item.TrangThaiNgayThanhToan,
-          ghi_chu: item.NoiDung,
-          NoiDung: item.NoiDung, // Add NoiDung field for PaymentsList component
-          created_at: undefined,
-          ThanhToan: item.ThanhToan, // Add ThanhToan field for PaymentsList component
-          SuaLichSu: item.SuaLichSu, // Add SuaLichSu field for PaymentsList component
-        }));
+      const response = await getPaymentHistoryByContract(maHopDong);
+      const raw = Array.isArray(response?.data) ? response.data : [];
+      if (raw.length > 0) {
+        return mapHistoryItems(raw);
       }
-      // TODO: fallback to API when needed
-      return [];
     } catch (error) {
       console.error('Error loading Tin Chap payment history:', error);
-      return [];
     }
-  };  
+
+    if (contract?.LichSuTraLai && Array.isArray(contract.LichSuTraLai)) {
+      return mapHistoryItems(contract.LichSuTraLai);
+    }
+    return [];
+  }, [contract?.LichSuTraLai]);
 
   // Process payment for Tin Chap
   const processTinChapPayment = async (maHD: string, amount: number): Promise<void> => {
