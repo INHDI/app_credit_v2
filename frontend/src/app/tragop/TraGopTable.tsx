@@ -123,7 +123,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                   </td>
                   <td className="p-4">
                     <div className="font-medium text-slate-800">{contract.HoTen || contract.ten_khach_hang}</div>
-                    <div className="text-xs text-slate-500">Thanh toán đến ngày: {lastDateLichSuTraLai(contract)}</div>
+                    <div className="text-xs text-slate-500">Ngày kết thúc: {lastDateLichSuTraLai(contract)}</div>
                   </td>
                   <td className="p-4">
                     <div className="text-sm text-slate-600">{contract.NgayVay}</div>
@@ -212,22 +212,24 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                         </TooltipContent>
                       </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 p-0 hover:bg-emerald-50 rounded-lg transition-all duration-200 hover:shadow-sm"
-                            aria-label="Tất toán"
-                            onClick={() => handleOpenSettle(contract)}
-                          >
-                            <DollarSign className="h-4 w-4 text-emerald-600" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Tất toán</p>
-                        </TooltipContent>
-                      </Tooltip>
+                      { contract.TrangThai !== 'Đã tất toán' && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-9 w-9 p-0 hover:bg-emerald-50 rounded-lg transition-all duration-200 hover:shadow-sm"
+                              aria-label="Tất toán"
+                              onClick={() => handleOpenSettle(contract)}
+                            >
+                              <DollarSign className="h-4 w-4 text-emerald-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Tất toán</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                       {onDelete && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -262,7 +264,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                 <div className="text-xs text-slate-500">#{startIndex + index + 1} • {contract.MaHD || contract.ma_hop_dong}</div>
                 <div className="font-semibold text-slate-800">{contract.HoTen || contract.ten_khach_hang}</div>
                 <div className="text-xs text-slate-500 mt-1">Ngày vay: {contract.NgayVay}</div>
-                <div className="text-xs text-slate-500 mt-1">Thanh toán đến ngày: {lastDateLichSuTraLai(contract)}</div>
+                <div className="text-xs text-slate-500 mt-1">Ngày kết thúc: {lastDateLichSuTraLai(contract)}</div>
               </div>
                 <Badge className={`${
                   (contract.TrangThai || '').includes('tất toán')
@@ -337,16 +339,18 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                     )}
                     </TooltipContent>
                   </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" className="rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50 flex-1" onClick={() => handleOpenSettle(contract)}>
-                        <DollarSign className="h-4 w-4 mr-1" /> Tất toán
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Tất toán</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  { contract.TrangThai !== 'Đã tất toán' && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="sm" className="rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50 flex-1" onClick={() => handleOpenSettle(contract)}>
+                          <DollarSign className="h-4 w-4 mr-1" /> Tất toán
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Tất toán</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   {onDelete && (
                     <Tooltip>
                       <TooltipTrigger asChild>

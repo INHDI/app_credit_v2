@@ -191,7 +191,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                     </Tooltip>
                     
                     {/* Chỉ hiển thị nút tất toán khi chưa tất toán */}
-                    {contract.status !== 'da_thanh_toan' && (
+                    {contract.status !== 'da_thanh_toan' && contract.TrangThai !== 'Đã tất toán' &&  (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button 
@@ -312,7 +312,7 @@ export default function TinChapTable({ contracts, startIndex, onSettled, onDelet
                 </Tooltip>
                               
                 {/* Chỉ hiển thị nút tất toán khi chưa tất toán */}
-                {contract.status !== 'da_thanh_toan' && (
+                {contract.status !== 'da_thanh_toan' && contract.TrangThai !== 'Đã tất toán' && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button 

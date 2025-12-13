@@ -36,6 +36,7 @@ interface PaymentRecord {
   TrangThaiNgayThanhToan?: string;
   SuaLichSu?: boolean;
   TrangThai?: boolean;
+  ThanhToan: boolean;
 }
 
 interface PaymentsListProps {
@@ -128,7 +129,7 @@ export default function PaymentsList({
                     Thanh toán
                   </Button>
                 )} */}
-                {!contractStatus.includes("Đã tất toán") && payment.SuaLichSu === true && (
+                {!contractStatus.includes("Đã tất toán") && payment.SuaLichSu === true && payment.ThanhToan === true && (
                   <Button
                     size="sm"
                     className="bg-green-500 hover:bg-green-600 text-white rounded-lg px-2 sm:px-3 py-1 text-xs flex-shrink-0"

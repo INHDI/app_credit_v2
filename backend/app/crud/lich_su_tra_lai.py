@@ -333,7 +333,7 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
         if not contract:
             raise HTTPException(status_code=404, detail=f"Không tìm thấy hợp đồng {ma_hd}")
 
-        daily_interest = contract.LaiSuat or 0
+        
         ky_dong_days = contract.KyDong or 1
         if ky_dong_days == 1:
             current_date = date.today()
@@ -341,6 +341,7 @@ def update_lich_su(db: Session, ma_hd: str, tien_da_tra: int = 0):
             current_date = date.today() + timedelta(days=(ky_dong_days - 1))
         # Lấy ra kì thanh toán gần nhất
         last_period = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.Ngay == (date.today())).first()
+        daily_interest = last_period.SoTien or 0
         noi_dung_last_period = last_period.NoiDung if last_period else None
         if last_period:
             if "cộng dồn" in last_period.NoiDung:
