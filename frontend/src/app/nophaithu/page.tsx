@@ -42,6 +42,7 @@ function mapApiItemToContract(item: any) {
     tongNoChuaTra: tongNoChuaTra,
     status,
     statusColor,
+    thanh_toan: item?.ThanhToan || false,
     raw: item,
   };
 }
@@ -94,6 +95,7 @@ export default function NoPhaiThuPage() {
 
   // Filter contracts
   const filteredContracts = contracts.filter(contract => {
+    // console.log('Filtering contract:', contract);
     const matchesSearch = contract.ma_hop_dong.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contract.ten_khach_hang.toLowerCase().includes(searchTerm.toLowerCase());
 

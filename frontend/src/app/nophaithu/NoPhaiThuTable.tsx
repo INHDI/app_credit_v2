@@ -134,6 +134,7 @@ export default function NoPhaiThuTable({
           </thead>
           <tbody>
             {contracts.map((contract, index) => {
+              const thanhToan = contract.thanh_toan;
               const list: any[] = Array.isArray(contract.raw?.LichSuTraLai) ? contract.raw.LichSuTraLai : [];
               const toDateOnly = (d: any): string => {
                 const dt = new Date(d);
@@ -241,7 +242,7 @@ export default function NoPhaiThuTable({
                         <p>Xem chi tiết</p>
                       </TooltipContent>
                     </Tooltip>
-                    
+                    { !thanhToan ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -258,6 +259,7 @@ export default function NoPhaiThuTable({
                         <p>Đóng tiền</p>
                       </TooltipContent>
                     </Tooltip>
+                    ) : null }
                     
                     <Tooltip>
                       <TooltipTrigger asChild>

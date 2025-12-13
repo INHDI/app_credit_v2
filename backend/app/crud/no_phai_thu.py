@@ -63,6 +63,7 @@ def get_no_phai_thus(db: Session, time: str = "today") -> List[NoPhaiThuResponse
                 so_tien_vay = tc.SoTienVay
                 ky_dong = tc.KyDong
                 lai_suat = tc.LaiSuat
+                thanh_toan = db.query(LichSuTraLai.ThanhToan).filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.Ngay == today).first()
                 # Tin chấp: Tổng = SoTienVay + LaiSuat * <số kỳ đóng>
                 so_ky_dong = len(lich_sus)
                 tong_tien_vay_va_lai = so_tien_vay + lai_suat * so_ky_dong
@@ -76,12 +77,13 @@ def get_no_phai_thus(db: Session, time: str = "today") -> List[NoPhaiThuResponse
                 so_tien_vay = tg.SoTienVay
                 ky_dong = tg.KyDong
                 lai_suat = tg.LaiSuat
+                thanh_toan = db.query(LichSuTraLai.ThanhToan).filter(LichSuTraLai.MaHD == ma_hd, LichSuTraLai.Ngay == today).first()
                 # Trả góp: Tổng = SoTienVay + LaiSuat
                 tong_tien_vay_va_lai = so_tien_vay + lai_suat
 
             # Latest day status if available
             trang_thai_ngay_thanh_toan = lich_sus[-1].TrangThaiNgayThanhToan if lich_sus else ""
-
+            # print(thanh_toan[0] if thanh_toan else None)
             results.append(
                 NoPhaiThuResponse(
                     MaHD=ma_hd,
@@ -94,6 +96,7 @@ def get_no_phai_thus(db: Session, time: str = "today") -> List[NoPhaiThuResponse
                     SoLanTra=so_lan_tra,
                     TrangThaiThanhToan=trang_thai,
                     TrangThaiNgayThanhToan=trang_thai_ngay_thanh_toan,
+                    ThanhToan=thanh_toan[0] if thanh_toan else None,
                     LichSuTraLai=lich_su_schemas,
                     LaiDaTra=lai_da_tra,
                     TongTienVayVaLai=tong_tien_vay_va_lai,

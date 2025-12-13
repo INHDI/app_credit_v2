@@ -1077,6 +1077,7 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
         
         # Cộng dồn nội dung cho bản ghi được chọn (STT) - Trả Góp
         if "Số tiền thanh toán" in db_lich_su.NoiDung:
+            
             db_lich_su.NoiDung += f" + {format_amount(so_tien)} VNĐ"
         else:
             db_lich_su.NoiDung += f" |Số tiền thanh toán: {format_amount(so_tien)} VNĐ"
@@ -1117,6 +1118,8 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
             
             # Cộng dồn nội dung thanh toán cho Trả Góp
             if is_first_period:
+                period.ThanhToan = True
+                period.SuaLichSu = True
                 # Kỳ đầu tiên: không cần cập nhật vì đã cập nhật ở trên
                 is_first_period = False
             else:
@@ -1128,6 +1131,8 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
                 else:
                     # Chưa có ghi chú thanh toán, tạo mới
                     period.NoiDung += f" |{noi_dung_lai}"
+                period.ThanhToan = False
+                period.SuaLichSu = False
 
     # Kiểm tra tất toán: nếu tổng đã trả >= tổng cần trả
     if "TG" in ma_hd:
@@ -1141,14 +1146,29 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
             contract.TrangThai = TrangThaiThanhToan.DA_TAT_TOAN.value
     # Cập nhật trạng thái hợp đồng dựa trên tổng còn nợ trong lịch sử (nếu chưa tất toán)
     if contract and contract.TrangThai != TrangThaiThanhToan.DA_TAT_TOAN.value and "TG" in ma_hd:
-        any_unpaid = db.query(LichSuTraLai).filter(
+        # Tính tổng `TienDaTra` cho hợp đồng (dùng SQL SUM)
+        check_tat_toan = (db.query(func.coalesce(func.sum(LichSuTraLai.TienDaTra), 0)).filter(
             LichSuTraLai.MaHD == ma_hd,
-            LichSuTraLai.SoTien > LichSuTraLai.TienDaTra
-        ).first() is not None
+        ).scalar() or 0) + so_tien
+        
+        if check_tat_toan >= (contract.SoTienVay + contract.LaiSuat):
+            check_tat_toan_bool = True
+        else:
+            check_tat_toan_bool = False
 
+        # If check_tat_toan_bool is True -> fully settled (DA_TAT_TOAN), otherwise partial (THANH_TOAN_MOT_PHAN)
         contract.TrangThai = (
-            TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value if any_unpaid else TrangThaiThanhToan.DA_TAT_TOAN.value
+            TrangThaiThanhToan.DA_TAT_TOAN.value if check_tat_toan_bool else TrangThaiThanhToan.THANH_TOAN_MOT_PHAN.value
         )
+        if check_tat_toan_bool:
+            create_lich_su_utils(db, 
+                ma_hd=ma_hd, 
+                ho_ten=contract.HoTen, 
+                ngay=date.today(), 
+                so_tien=so_tien, 
+                hanh_dong="Tất toán hợp đồng trả góp", 
+                loai_hop_dong="TG"
+            )
 
     db.commit()
 

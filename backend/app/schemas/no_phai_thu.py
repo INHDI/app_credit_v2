@@ -13,6 +13,7 @@ class NoPhaiThuResponse(BaseModel):
     SoLanTra: int = Field(default=0, description="Số lần trả (chỉ áp dụng cho hợp đồng trả góp)")
     TrangThaiThanhToan: str = Field(..., description="Trạng thái thanh toán")
     TrangThaiNgayThanhToan: str = Field(..., description="Trạng thái ngày thanh toán")
+    ThanhToan: bool | None = Field(None, description="Trạng thái thanh")
     LichSuTraLai: List[Any] = Field(..., description="Lịch sử trả lãi")
     LaiDaTra: int = Field(..., description="Lãi đã trả")
     TongTienVayVaLai: int = Field(..., description="Tổng số tiền vay + tổng lãi phải trả")
