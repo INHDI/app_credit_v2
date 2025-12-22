@@ -37,19 +37,27 @@ export interface DashboardApiResponse {
   error: string | null;
 }
 
+import { ApiService } from './api';
+
+// ... interfaces retain ...
+
 // API Function to fetch dashboard data
 export const fetchDashboardData = async (timePeriod: string = 'all'): Promise<DashboardApiResponse> => {
-  const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.DASHBOARD}?time_period=${timePeriod}`;
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: API_HEADERS.JSON_ACCEPT,
-  });
+  try {
+    const response = await ApiService.getDashboard(timePeriod);
+    // ApiService returns the full response object matching ApiResponse shape
+    // Check if the response matches DashboardApiResponse structure or adapt it
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    // Assuming ApiService.getDashboard returns ApiResponse<DashboardData>
+    return response as unknown as DashboardApiResponse;
+  } catch (error) {
+    console.error('Fetch dashboard error:', error);
+    return {
+      success: false,
+      data: null as any,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      error: 'API_ERROR'
+    };
   }
-
-  return await response.json();
 };
 

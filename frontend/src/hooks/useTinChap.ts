@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { API_CONFIG, ENV_CONFIG } from "@/config/config";
 import { FileText, DollarSign, TrendingUp, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatters";
+import { getAuthHeaders } from "@/services/authApi";
 
 export type ContractStatus =
   | "chua_thanh_toan"
@@ -61,15 +62,15 @@ export function useTinChap() {
     onClick?: () => void;
     isActive?: boolean;
   }> = [
-    {
-      label: "Trang chủ",
-      onClick: () => navigateTo("/"),
-    },
-    {
-      label: "Tín chấp",
-      isActive: true,
-    },
-  ];
+      {
+        label: "Trang chủ",
+        onClick: () => navigateTo("/"),
+      },
+      {
+        label: "Tín chấp",
+        isActive: true,
+      },
+    ];
 
   // Data state
   const [contracts, setContracts] = useState<CreditContract[]>([]);
@@ -103,7 +104,12 @@ export function useTinChap() {
       url.searchParams.set("sort_by", sortBy);
       url.searchParams.set("sort_dir", sortDir);
 
-      const resp = await fetch(url.toString(), { headers: { accept: "application/json" } });
+      const resp = await fetch(url.toString(), {
+        headers: {
+          accept: "application/json",
+          ...getAuthHeaders()
+        }
+      });
       if (!resp.ok) {
         throw new Error(`HTTP ${resp.status}`);
       }
@@ -162,7 +168,7 @@ export function useTinChap() {
   // Summary stats based on current filtered list
   const summaryStats = useMemo(() => {
     const totalContracts = filteredContracts.length;
-  const activeContracts = filteredContracts.filter(c => !((c.statusList || []) as ContractStatus[]).includes('da_thanh_toan')).length;
+    const activeContracts = filteredContracts.filter(c => !((c.statusList || []) as ContractStatus[]).includes('da_thanh_toan')).length;
     const totaltong_tien_vay = filteredContracts.reduce((sum, c) => sum + (c.SoTienVay || 0), 0);
     const totaltien_da_tra = filteredContracts.reduce((sum, c) => sum + (c.LaiDaTra || 0) + (c.SoTienTraGoc || 0), 0);
     const totaltong_tien_con_lai = filteredContracts.reduce((sum, c) => sum + (c.SoTienVay || 0) + (c.LaiConLai || 0) - (c.SoTienTraGoc || 0), 0);
@@ -209,7 +215,7 @@ export function useTinChap() {
       gradient: "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200",
       iconBg: "bg-amber-100",
       textColor: "text-amber-700",
-    }
+    },
   ];
 
   // Handlers
@@ -238,9 +244,9 @@ export function useTinChap() {
     setSearchTerm,
     setSelectedStatus,
     setSelectedTimeRange,
-      setCurrentPage,
-      setSortBy,
-      setSortDir,
+    setCurrentPage,
+    setSortBy,
+    setSortDir,
     // data
     summaryCards,
     paginatedContracts,
@@ -248,9 +254,9 @@ export function useTinChap() {
     itemsPerPage,
     totalPages,
     countAllItems,
-      hasNextPage,
-      loading,
-      error,
+    hasNextPage,
+    loading,
+    error,
     // actions
     refreshContracts,
     deleteContract,

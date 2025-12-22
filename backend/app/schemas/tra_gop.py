@@ -14,6 +14,7 @@ class TraGopCreate(BaseModel):
     KyDong: int = Field(...,gt=0, description="Kỳ đóng (số ngày giữa các kỳ thanh toán)")
     SoLanTra: int = Field(...,gt=0, description="Tổng số lần phải trả")
     LaiSuat: int = Field(..., description="Lãi suất (tổng lãi cả kỳ hạn, VNĐ)")
+    user_id: Optional[int] = Field(None, description="ID người nợ (nếu có tài khoản)")
 
 
 class TraGopUpdate(BaseModel):
@@ -37,6 +38,7 @@ class TraGop(BaseModel):
     SoLanTra: int = Field(..., description="Tổng số lần phải trả")
     LaiSuat: int = Field(..., description="Lãi suất (tổng lãi cả kỳ hạn, VNĐ)")
     TrangThai: str = Field(..., description="Trạng thái")
+    user_id: Optional[int] = Field(None, description="ID người nợ (nếu có tài khoản)")
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -50,6 +52,7 @@ class TraGopResponse(BaseModel):
     SoLanTra: int = Field(..., description="Tổng số lần phải trả")
     LaiSuat: int = Field(..., description="Lãi suất (tổng lãi cả kỳ hạn, VNĐ)")
     TrangThai: str = Field(..., description="Trạng thái")
+    user_id: Optional[int] = Field(None, description="ID người nợ (nếu có tài khoản)")
     LichSuTraLai: List[Any] = Field(..., description="Lịch sử trả lãi")
     DaThanhToan: int = Field(..., description="Đã thanh toán")
     ConLai: int = Field(..., description="Còn lại")

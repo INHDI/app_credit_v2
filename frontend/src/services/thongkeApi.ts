@@ -1,68 +1,10 @@
 import { API_HEADERS, ENV_CONFIG } from '@/config/config';
+import { getAuthHeaders } from './authApi';
 
 export type Granularity = "daily" | "weekly" | "monthly";
+// ... (keep types)
 
-export interface ThongKeMeta {
-  granularity: Granularity;
-  start_date: string;
-  end_date: string;
-  bucket_count: number;
-}
-
-export interface ThongKeSummary {
-  total_disbursed: number;
-  total_collected: number;
-  total_interest: number;
-  total_expected: number;  // New field: principal + interest
-  net_cash_flow: number;
-  active_contracts: number;
-  overdue_contracts: number;
-  overdue_amount: number;
-}
-
-export interface BreakdownItem {
-  disbursed: number;
-  collected: number;
-  interest: number;
-}
-
-export interface ThongKeBreakdown {
-  tin_chap: BreakdownItem;
-  tra_gop: BreakdownItem;
-}
-
-export interface TrendData {
-  bucket: string;
-  tong_tien_chi: number;
-  tong_tien_thu: number;
-  tong_tien_lai: number;
-  breakdown: {
-    tin_chap: number;
-    tra_gop: number;
-  };
-}
-
-export interface TopOutstandingContract {
-  ma_hop_dong: string;
-  amount: number;
-  contract_type: "tin_chap" | "tra_gop";
-  is_overdue: boolean;
-}
-
-export interface ThongKeData {
-  meta: ThongKeMeta;
-  summary: ThongKeSummary;
-  breakdown: ThongKeBreakdown;
-  trend: TrendData[];
-  top_outstanding: TopOutstandingContract[];
-}
-
-export interface ThongKeApiResponse {
-  success: boolean;
-  data: ThongKeData;
-  message: string;
-  error: string | null;
-}
+// ...
 
 export const fetchThongKe = async (
   granularity: Granularity,
@@ -76,7 +18,10 @@ export const fetchThongKe = async (
 
   const response = await fetch(url.toString(), {
     method: 'GET',
-    headers: API_HEADERS.JSON_ACCEPT,
+    headers: {
+      ...API_HEADERS.JSON_ACCEPT,
+      ...getAuthHeaders()
+    },
   });
 
   if (!response.ok) {

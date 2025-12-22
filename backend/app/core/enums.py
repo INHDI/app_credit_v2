@@ -43,10 +43,24 @@ class TimePeriod(str, Enum):
         """Trả về danh sách tất cả các giá trị"""
         return [period.value for period in cls]
 
+
+class UserRole(str, Enum):
+    """Vai trò người dùng"""
+    ADMIN = "admin"           # Người quản trị - toàn quyền
+    COLLECTOR = "collector"   # Nhân viên thu - xem nợ phải thu + nộp lãi
+    DEBTOR = "debtor"         # Người nợ - xem thông tin nợ cá nhân
+
+    @classmethod
+    def list_values(cls):
+        """Trả về danh sách tất cả các giá trị"""
+        return [role.value for role in cls]
+
+
 # Export all enums
 __all__ = [
     "TrangThaiThanhToan", 
     "TrangThaiNgayThanhToan",
     "TimePeriod",
+    "UserRole",
 ]
 

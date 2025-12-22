@@ -1,7 +1,7 @@
 """
 TinChap model - Tín chấp (Credit without collateral)
 """
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from app.core.database import Base
 import datetime
 
@@ -20,7 +20,5 @@ class TinChap(Base):
     LaiSuat = Column(Integer, nullable=False)  # Fixed interest amount (VNĐ)
     SoTienTraGoc = Column(Integer, nullable=True, default=0)  # Số tiền trả gốc (nếu cần cho tất toán)
     TrangThai = Column(String, nullable=False)  # [TrangThaiThanhToan, TrangThaiNgayThanhToan]
-
-    # def __repr__(self):
-    #     return f"<TinChap(MaHD='{self.MaHD}', HoTen='{self.HoTen}', SoTienVay={self.SoTienVay})>"
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Liên kết người nợ (optional)
 

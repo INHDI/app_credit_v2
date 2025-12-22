@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.core.database import engine, Base
-from app.routers import tin_chap, tra_gop, lich_su_tra_lai, no_phai_thu, dashboard, lich_su
+from app.routers import tin_chap, tra_gop, lich_su_tra_lai, no_phai_thu, dashboard, lich_su, auth, debtor
 from app.websocket import router as websocket_router
 
 # Configure logging for the application
@@ -39,6 +39,8 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router)
+app.include_router(debtor.router)
 app.include_router(tin_chap.router)
 app.include_router(tra_gop.router)
 app.include_router(lich_su_tra_lai.router)
@@ -64,6 +66,8 @@ async def root():
         "message": "Welcome to API App Credit", 
         "version": "1.0.0",
         "endpoints": {
+            "Auth": "/auth",
+            "Debtor Portal": "/debtor",
             "TinChap": "/tin-chap",
             "TraGop": "/tra-gop",
             "LichSuTraLai": "/lich-su-tra-lai",

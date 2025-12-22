@@ -13,6 +13,7 @@ class TinChapCreate(BaseModel):
     SoTienVay: int = Field(..., gt=0, description="Số tiền vay")
     KyDong: int = Field(..., gt=0, description="Kỳ đóng (số ngày giữa các kỳ thanh toán)")
     LaiSuat: int = Field(..., ge=0, description="Lãi suất (số tiền cố định mỗi kỳ, VNĐ)")
+    user_id: Optional[int] = Field(None, description="ID người nợ (nếu có tài khoản)")
 
 
 class TinChapUpdate(BaseModel):
@@ -35,6 +36,7 @@ class TinChap(BaseModel):
     LaiSuat: int = Field(..., description="Lãi suất (số tiền cố định mỗi kỳ, VNĐ)")
     TrangThai: str = Field(..., description="Trạng thái")
     SoTienTraGoc: int = Field(..., description="Số tiền trả gốc")
+    user_id: Optional[int] = Field(None, description="ID người nợ (nếu có tài khoản)")
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -48,6 +50,7 @@ class TinChapResponse(BaseModel):
     LaiSuat: int = Field(..., description="Lãi suất (số tiền cố định mỗi kỳ, VNĐ)")
     SoTienTraGoc: int = Field(..., description="Số tiền trả gốc")
     TrangThai: str = Field(..., description="Trạng thái")
+    user_id: Optional[int] = Field(None, description="ID người nợ (nếu có tài khoản)")
     LichSuTraLai: List[Any] = Field(..., description="Lịch sử trả lãi")
     LaiDaTra: int = Field(..., description="Lãi đã trả")
     GocConLai: int = Field(..., description="Gốc còn lại")

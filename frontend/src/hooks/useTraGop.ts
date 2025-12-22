@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { FileText, DollarSign, TrendingUp, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatters";
 import { API_CONFIG, ENV_CONFIG } from "@/config/config";
+import { getAuthHeaders } from "@/services/authApi";
 
 export interface CreditContract {
   // New API fields
@@ -53,15 +54,15 @@ export function useTraGop() {
     onClick?: () => void;
     isActive?: boolean;
   }> = [
-    {
-      label: "Trang chủ",
-      onClick: () => navigateTo("/"),
-    },
-    {
-      label: "Trả góp",
-      isActive: true,
-    },
-  ];
+      {
+        label: "Trang chủ",
+        onClick: () => navigateTo("/"),
+      },
+      {
+        label: "Trả góp",
+        isActive: true,
+      },
+    ];
 
   // Data state
   const [contracts, setContracts] = useState<CreditContract[]>([]);
@@ -95,7 +96,12 @@ export function useTraGop() {
         url.searchParams.set("search", searchTerm.trim());
       }
 
-      const resp = await fetch(url.toString(), { headers: { accept: "application/json" } });
+      const resp = await fetch(url.toString(), {
+        headers: {
+          accept: "application/json",
+          ...getAuthHeaders()
+        }
+      });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const json = await resp.json();
       if (json?.success) {
@@ -239,5 +245,3 @@ export function useTraGop() {
     deleteContract,
   };
 }
-
-

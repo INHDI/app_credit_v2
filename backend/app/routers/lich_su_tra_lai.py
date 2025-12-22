@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session
 from typing import List, Any
 
 from app.core.database import get_db
+from app.core.deps import get_current_user, require_admin, require_admin_or_collector
+from app.core.enums import UserRole
+from app.models.user import User
 from app.schemas.lich_su_tra_lai import LichSuTraLai
 from app.schemas.response import ApiResponse
 from app.crud import lich_su_tra_lai as crud_lich_su
@@ -20,9 +23,10 @@ router = APIRouter(
 @router.post("", response_model=ApiResponse[Any], status_code=201)
 async def create_lich_su( 
     db: Session = Depends(get_db),
-    ma_hd: str = ""
+    ma_hd: str = "",
+    current_user: User = Depends(require_admin)
 ):
-    """Create payment history records for a contract"""
+    """Create payment history records for a contract (Admin only)"""
     result = crud_lich_su.create_lich_su(db=db, ma_hd=ma_hd)
     
     # Broadcast WebSocket event
@@ -37,8 +41,13 @@ async def create_lich_su(
 
 
 @router.get("", response_model=ApiResponse[List[LichSuTraLai]])
-async def get_all_lich_su(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """Get all payment history records"""
+async def get_all_lich_su(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_collector)
+):
+    """Get all payment history records (Admin and Collector)"""
     result = crud_lich_su.get_lich_sus(db=db, skip=skip, limit=limit)
     # Convert list of SQLAlchemy models to Pydantic schemas
     lich_sus_response = [LichSuTraLai.model_validate(ls) for ls in result]
@@ -49,8 +58,9 @@ async def get_all_lich_su(skip: int = 0, limit: int = 100, db: Session = Depends
 async def delete_thanh_toan(
     ma_hd: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
 ):
-    """Delete payment history from date todate"""
+    """Delete payment history from date todate (Admin only)"""
     result = crud_lich_su.delete_thanh_toan(db=db, ma_hd=ma_hd)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
@@ -70,8 +80,12 @@ async def delete_thanh_toan(
 
 
 @router.get("/{stt}", response_model=ApiResponse[LichSuTraLai])
-async def get_lich_su_by_id(stt: int, db: Session = Depends(get_db)):
-    """Get a specific payment history record by STT"""
+async def get_lich_su_by_id(
+    stt: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_collector)
+):
+    """Get a specific payment history record by STT (Admin and Collector)"""
     lich_su = crud_lich_su.get_lich_su(db=db, stt=stt)
     if not lich_su:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
@@ -81,8 +95,12 @@ async def get_lich_su_by_id(stt: int, db: Session = Depends(get_db)):
 
 
 @router.get("/contract/{ma_hd}", response_model=ApiResponse[List[LichSuTraLai]])
-async def get_lich_su_by_contract(ma_hd: str, db: Session = Depends(get_db)):
-    """Get all payment history records for a specific contract"""
+async def get_lich_su_by_contract(
+    ma_hd: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_collector)
+):
+    """Get all payment history records for a specific contract (Admin and Collector)"""
     result = crud_lich_su.get_lich_sus_by_contract(db=db, ma_hd=ma_hd)
     # Convert list of SQLAlchemy models to Pydantic schemas
     lich_sus_response = [LichSuTraLai.model_validate(ls) for ls in result]
@@ -90,8 +108,12 @@ async def get_lich_su_by_contract(ma_hd: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/{stt}", response_model=ApiResponse[Any])
-async def delete_lich_su(stt: int, db: Session = Depends(get_db)):
-    """Delete a payment history record"""
+async def delete_lich_su(
+    stt: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Delete a payment history record (Admin only)"""
     success = crud_lich_su.delete_lich_su(db=db, stt=stt)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
@@ -108,11 +130,13 @@ async def delete_lich_su(stt: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/contract/{ma_hd}", response_model=ApiResponse[Any])
-async def delete_lich_su_by_contract(ma_hd: str, db: Session = Depends(get_db)):
-    """Delete all payment history records for a specific contract"""
+async def delete_lich_su_by_contract(
+    ma_hd: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Delete all payment history records for a specific contract (Admin only)"""
     so_ban_ghi_da_xoa = crud_lich_su.delete_lich_sus_by_contract(db=db, ma_hd=ma_hd)
-    # if so_ban_ghi_da_xoa == 0:
-    #     raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi cho hợp đồng này")
     
     # Broadcast WebSocket event
     await broadcast_lich_su_tra_lai_event(
@@ -128,11 +152,14 @@ async def delete_lich_su_by_contract(ma_hd: str, db: Session = Depends(get_db)):
     )
     
 @router.delete("/contract/update/{ma_hd}", response_model=ApiResponse[Any])
-async def update_lich_su_by_contract(ma_hd: str, db: Session = Depends(get_db)):
-    """Delete all payment history records for a specific contract"""
+async def update_lich_su_by_contract(
+    ma_hd: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Delete all payment history records for a specific contract (Admin only)"""
     so_ban_ghi_da_xoa = crud_lich_su.update_lich_sus_by_contract(db=db, ma_hd=ma_hd)
     if so_ban_ghi_da_xoa == 0:
-        # raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi cho hợp đồng này")
         return ApiResponse.success_response(
             data={"MaHD": ma_hd, "records_deleted": so_ban_ghi_da_xoa}, 
             message=f"Cập nhật lịch sử trả lãi cho hợp đồng {ma_hd} thành công"
@@ -155,9 +182,10 @@ async def update_lich_su_by_contract(ma_hd: str, db: Session = Depends(get_db)):
 async def pay_lich_su(
     stt: int,
     so_tien: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Pay a payment history record"""
+    """Pay a payment history record (Admin and Collector)"""
     result = crud_lich_su.pay_lich_su(db=db, stt=stt, so_tien=so_tien)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
@@ -183,9 +211,10 @@ async def pay_lich_su(
 async def pay_lich_su_by_contract(
     ma_hd: str,
     so_tien: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Pay a payment history record"""
+    """Pay a payment history record by contract (Admin and Collector)"""
     result = crud_lich_su.pay_lich_su_by_contract(db=db, ma_hd=ma_hd, so_tien=so_tien)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi cho hợp đồng này")
@@ -209,7 +238,7 @@ async def pay_lich_su_by_contract(
 
 @router.post("/auto-create-lich-su", response_model=ApiResponse[Any])
 async def auto_create_lich_su(db: Session = Depends(get_db)):
-    """Auto create payment history records for all contracts"""
+    """Auto create payment history records for all contracts (No auth - for scheduler)"""
     result = crud_lich_su.auto_create_lich_su(db=db)
     return ApiResponse.success_response(data=result, message="Tự động cập nhật lịch sử trả lãi thành công")
 
@@ -218,14 +247,12 @@ async def auto_create_lich_su(db: Session = Depends(get_db)):
 async def pay_full_lich_su(
     ma_hd: str,
     tien_lai: int = 0,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
 ):
-    """Pay full payment history records for a specific contract.
+    """Pay full payment history records for a specific contract (Admin only).
 
     Optional query param `tien_lai` allows specifying how much interest is being paid now.
-    If `tien_lai` < required interest, the system will allocate this interest across
-    history records similar to `pay_lich_su` logic and will NOT force full settlement.
-    If `tien_lai` >= required interest, the behavior remains as before (full settlement).
     """
     result = crud_lich_su.tat_toan_hop_dong(db=db, ma_hd=ma_hd, tien_lai=tien_lai)
     
@@ -251,8 +278,9 @@ async def update_lich_su(
     ma_hd: str,
     tien_da_tra: int = 0,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
 ):
-    """Update a payment history record"""
+    """Update a payment history record (Admin only)"""
     result = crud_lich_su.update_lich_su(db=db, ma_hd=ma_hd, tien_da_tra=tien_da_tra)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
@@ -269,3 +297,4 @@ async def update_lich_su(
         message="Dashboard cần cập nhật sau khi sửa thanh toán"
     )
     return ApiResponse.success_response(data=result, message="Cập nhật lịch sử trả lãi thành công")
+

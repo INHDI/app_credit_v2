@@ -5,9 +5,31 @@ import {
   PieChart,
   PiggyBank,
   History,
+  Users,
 } from "lucide-react"
 
-export const NAVIGATION_SECTIONS = [
+// Role types
+export type UserRole = 'admin' | 'collector' | 'debtor';
+
+// Navigation item with role restrictions
+export interface NavigationItem {
+  id: string;
+  title: string;
+  icon: any;
+  href?: string;
+  iconBg: string;
+  hoverColor: string;
+  badge?: { count: number; color: string; show: boolean } | number;
+  onClick?: () => void;
+  roles: UserRole[]; // Allowed roles
+}
+
+export interface NavigationSection {
+  title: string;
+  items: NavigationItem[];
+}
+
+export const NAVIGATION_SECTIONS: NavigationSection[] = [
   {
     title: "Chính",
     items: [
@@ -20,6 +42,18 @@ export const NAVIGATION_SECTIONS = [
         hoverColor: "hover:bg-blue-50 hover:text-blue-700",
         badge: undefined,
         onClick: undefined,
+        roles: ['admin'], // Dashboard is admin only
+      },
+      {
+        id: "debtor-home",
+        title: "Tổng quan",
+        icon: Home,
+        href: "/debtor",
+        iconBg: "bg-teal-100",
+        hoverColor: "hover:bg-teal-50 hover:text-teal-700",
+        badge: undefined,
+        onClick: undefined,
+        roles: ['debtor'], // Debtor Dashboard
       },
       {
         id: "no-phai-thu",
@@ -34,6 +68,7 @@ export const NAVIGATION_SECTIONS = [
         iconBg: "bg-red-100",
         hoverColor: "hover:bg-red-50 hover:text-red-700",
         onClick: undefined,
+        roles: ['admin', 'collector'], // Admin and Collector
       },
     ],
   },
@@ -49,6 +84,7 @@ export const NAVIGATION_SECTIONS = [
         hoverColor: "hover:bg-green-50 hover:text-green-700",
         badge: undefined,
         onClick: undefined,
+        roles: ['admin'], // Admin only
       },
       {
         id: "installment",
@@ -57,8 +93,9 @@ export const NAVIGATION_SECTIONS = [
         iconBg: "bg-purple-100",
         hoverColor: "hover:bg-purple-50 hover:text-purple-700",
         badge: undefined,
-        href: "/tragop", 
+        href: "/tragop",
         onClick: undefined,
+        roles: ['admin'], // Admin only
       },
     ],
   },
@@ -74,6 +111,7 @@ export const NAVIGATION_SECTIONS = [
         badge: undefined,
         href: "/lichsu",
         onClick: undefined,
+        roles: ['admin'], // Admin only
       },
       {
         id: "statistics",
@@ -84,7 +122,29 @@ export const NAVIGATION_SECTIONS = [
         badge: undefined,
         href: "/thongke",
         onClick: undefined,
+        roles: ['admin'], // Admin only
+      },
+      {
+        id: "users",
+        title: "Người dùng",
+        icon: Users,
+        iconBg: "bg-amber-100",
+        hoverColor: "hover:bg-amber-50 hover:text-amber-700",
+        badge: undefined,
+        href: "/users",
+        onClick: undefined,
+        roles: ['admin'], // Admin only
       },
     ],
   },
 ]
+
+// Helper function to filter navigation by role
+export function getNavigationForRole(role: UserRole | null): NavigationSection[] {
+  if (!role) return [];
+
+  return NAVIGATION_SECTIONS.map(section => ({
+    ...section,
+    items: section.items.filter(item => item.roles.includes(role))
+  })).filter(section => section.items.length > 0);
+}

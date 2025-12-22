@@ -1,4 +1,5 @@
 import { API_CONFIG, API_HEADERS, createApiUrl } from '@/config/config';
+import { getAuthHeaders } from './authApi';
 
 // Standard API response shape used by the backend
 export interface ApiResponse<T = unknown> {
@@ -11,22 +12,30 @@ export interface ApiResponse<T = unknown> {
 // API Service for managing API calls
 export class ApiService {
   private static async request<T>(
-    endpoint: string, 
+    endpoint: string,
     options: RequestInit = {},
     params?: Record<string, string>
   ): Promise<T> {
     const url = createApiUrl(endpoint, params);
-    
+    const authHeaders = getAuthHeaders();
+
     const response = await fetch(url, {
       headers: {
         ...API_HEADERS.JSON_ACCEPT,
+        ...authHeaders,
         ...options.headers,
       },
       ...options,
     });
 
+    // Handle 401 Unauthorized - throw error, let calling code handle redirect
+    if (response.status === 401) {
+      throw new Error('Unauthorized');
+    }
+
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     return response.json();

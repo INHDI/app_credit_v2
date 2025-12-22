@@ -190,7 +190,8 @@ def create_tra_gop(db: Session, tra_gop: TraGopCreate, ma_hd: str) -> TraGop:
         KyDong=tra_gop.KyDong,
         SoLanTra=tra_gop.SoLanTra,
         LaiSuat=tra_gop.LaiSuat,
-        TrangThai=trang_thai
+        TrangThai=trang_thai,
+        user_id=tra_gop.user_id  # Liên kết người nợ (nếu có)
     )
     
     db.add(db_tra_gop)

@@ -3,6 +3,21 @@ export const API_CONFIG = {
   BASE_URL: 'http://10.15.242.51:8000',
   WS_URL: 'ws://10.15.242.51:8000',
   ENDPOINTS: {
+    // Auth
+    AUTH: '/auth',
+    AUTH_LOGIN: '/auth/login',
+    AUTH_REGISTER: '/auth/register',
+    AUTH_LOGOUT: '/auth/logout',
+    AUTH_ME: '/auth/me',
+    AUTH_USERS: '/auth/users',
+    AUTH_DEBTORS: '/auth/users/debtors',
+    // Debtor Portal
+    DEBTOR: '/debtor',
+    DEBTOR_CONTRACTS: '/debtor/contracts',
+    DEBTOR_SCHEDULE: '/debtor/payment-schedule',
+    DEBTOR_SUMMARY: '/debtor/summary',
+    DEBTOR_HISTORY: '/debtor/payment-history',
+    // Existing
     TIN_CHAP: '/tin-chap',
     TRA_GOP: '/tra-gop',
     LICH_SU_TRA_LAI: '/lich-su-tra-lai',

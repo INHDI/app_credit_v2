@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session
 from typing import List, Any, Dict
 
 from app.core.database import get_db
+from app.core.deps import require_admin
+from app.core.enums import UserRole
+from app.models.user import User
 from app.schemas.tra_gop import TraGopCreate, TraGopResponse, TraGopUpdate, TraGop
 from app.schemas.response import ApiResponse
 from app.crud import tra_gop as crud_tra_gop
@@ -19,8 +22,12 @@ router = APIRouter(
 
 
 @router.post("", response_model=ApiResponse[TraGop], status_code=201)
-async def create_tra_gop(tra_gop: TraGopCreate, db: Session = Depends(get_db)):
-    """Create a new TraGop contract"""
+async def create_tra_gop(
+    tra_gop: TraGopCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Create a new TraGop contract (Admin only)"""
     ma_hd = generate_tra_gop_id(db)
     result = crud_tra_gop.create_tra_gop(db=db, tra_gop=tra_gop, ma_hd=ma_hd)
     # Convert SQLAlchemy model to Pydantic schema
@@ -54,9 +61,10 @@ async def get_all_tra_gop(
     sort_dir: str = "desc",
     today_only: bool = False,
     server_sort: bool = True,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
 ):
-    """Get all TraGop contracts with filter/search/sort/pagination with totals"""
+    """Get all TraGop contracts with filter/search/sort/pagination (Admin only)"""
     result = crud_tra_gop.get_tra_gops(
         db=db,
         status=status,
@@ -72,8 +80,12 @@ async def get_all_tra_gop(
 
 
 @router.get("/{ma_hd}", response_model=ApiResponse[TraGopResponse])
-async def get_tra_gop_by_id(ma_hd: str, db: Session = Depends(get_db)):
-    """Get a specific TraGop contract by MaHD"""
+async def get_tra_gop_by_id(
+    ma_hd: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Get a specific TraGop contract by MaHD (Admin only)"""
     tra_gop = crud_tra_gop.get_tra_gop_with_history(db=db, ma_hd=ma_hd)
     if not tra_gop:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng trả góp")
@@ -81,8 +93,13 @@ async def get_tra_gop_by_id(ma_hd: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{ma_hd}", response_model=ApiResponse[TraGop])
-async def update_tra_gop(ma_hd: str, tra_gop_update: TraGopUpdate, db: Session = Depends(get_db)):
-    """Update a TraGop contract"""
+async def update_tra_gop(
+    ma_hd: str, 
+    tra_gop_update: TraGopUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Update a TraGop contract (Admin only)"""
     db_tra_gop = crud_tra_gop.update_tra_gop(db=db, ma_hd=ma_hd, tra_gop_update=tra_gop_update)
     if not db_tra_gop:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng trả góp")
@@ -108,8 +125,12 @@ async def update_tra_gop(ma_hd: str, tra_gop_update: TraGopUpdate, db: Session =
 
 
 @router.delete("/{ma_hd}", response_model=ApiResponse[Any])
-async def delete_tra_gop(ma_hd: str, db: Session = Depends(get_db)):
-    """Delete a TraGop contract"""
+async def delete_tra_gop(
+    ma_hd: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Delete a TraGop contract (Admin only)"""
     success = crud_tra_gop.delete_tra_gop(db=db, ma_hd=ma_hd)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng trả góp")
@@ -130,4 +151,3 @@ async def delete_tra_gop(ma_hd: str, db: Session = Depends(get_db)):
     )
     
     return ApiResponse.success_response(data={"MaHD": ma_hd}, message="Xóa hợp đồng trả góp thành công")
-

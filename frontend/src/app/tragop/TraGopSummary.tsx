@@ -6,6 +6,7 @@ import { FileText, DollarSign, TrendingUp, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/formatters";
 import { API_CONFIG, ENV_CONFIG } from "@/config/config";
 import { useTraGopEvents } from "@/hooks/useWebSocket";
+import { getAuthHeaders } from "@/services/authApi";
 
 interface TraGopItem {
   MaHD: string;
@@ -27,7 +28,12 @@ export default function TraGopSummary() {
   const fetchSummary = useCallback(async () => {
     try {
       const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.TRA_GOP}?page=1&page_size=999999&sort_by=MaHD&sort_dir=desc`;
-      const resp = await fetch(url, { headers: { accept: "application/json" } });
+      const resp = await fetch(url, {
+        headers: {
+          accept: "application/json",
+          ...getAuthHeaders()
+        }
+      });
       const json = await resp.json();
       const data = json?.data;
       const list: TraGopItem[] = Array.isArray(data)

@@ -7,6 +7,8 @@ from datetime import datetime, date
 from typing import Optional, Literal
 
 from app.core.database import get_db
+from app.core.deps import require_admin
+from app.models.user import User
 from app.schemas.lich_su import LichSuResponse
 from app.schemas.response import ApiResponse
 from app.crud import lich_su as crud_lich_su
@@ -52,10 +54,11 @@ async def get_lich_su(
         default=None,
         description="Đến ngày (format: DD-MM-YYYY, ví dụ: 31-01-2025)"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
 ):
     """
-    Get history data with statistics and details
+    Get history data with statistics and details (Admin only)
     
     - **tu_ngay**: Filter from date (optional, format: DD-MM-YYYY)
     - **den_ngay**: Filter to date (optional, format: DD-MM-YYYY)
@@ -81,6 +84,7 @@ async def get_lich_su(
     )
 
 
+
 @router.get("/statistics", response_model=ApiResponse[dict])
 async def financial_statistics(
     granularity: Literal["daily", "weekly", "monthly"] = Query(
@@ -96,6 +100,7 @@ async def financial_statistics(
         description="Ngày kết thúc (format: DD-MM-YYYY)"
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
 ):
     """
     Get financial statistics with granularity (daily/weekly/monthly)

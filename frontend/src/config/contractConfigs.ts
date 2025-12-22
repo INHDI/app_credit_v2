@@ -4,13 +4,48 @@ import { User, DollarSign, Calendar, Clock } from 'lucide-react';
 // Base common fields (shared by all contract types)
 const baseCommonFields: FieldConfig[] = [
   {
+    key: 'user_source',
+    label: 'Nguồn khách hàng',
+    type: 'radio-group',
+    required: true,
+    gridCols: 3,
+    options: [
+      { value: 'existing', label: 'Có tài khoản' },
+      { value: 'new', label: 'Khách hàng mới (Không tài khoản)' }
+    ],
+    onSelectSideEffect: (value: any) => {
+      if (value === 'new') {
+        return { user_id: null, ho_ten: '', user_search: null };
+      }
+      return { ho_ten: '', user_search: null };
+    }
+  },
+  {
+    key: 'user_search',
+    label: 'Tìm kiếm khách hàng',
+    type: 'user-search',
+    gridCols: 3,
+    placeholder: 'Nhập tên hoặc số điện thoại...',
+    condition: (data: any) => data.user_source === 'existing',
+    onSelectSideEffect: (user: any) => {
+      if (user) {
+        return {
+          ho_ten: user.ho_ten,
+          user_id: user.id
+        };
+      }
+      return { ho_ten: '', user_id: null };
+    }
+  },
+  {
     key: 'ho_ten',
     label: 'Họ Tên',
     type: 'text',
     placeholder: 'Nhập họ và tên',
     required: true,
     icon: User,
-    gridCols: 1
+    gridCols: 1,
+    condition: (data: any) => data.user_source !== 'existing'
   },
   {
     key: 'ngay_vay',
@@ -32,7 +67,7 @@ const commonFinancialFields: FieldConfig[] = [
     required: true,
     icon: DollarSign,
     gridCols: 1,
-    formatValue: (value: number) => value.toLocaleString('vi-VN'),
+    formatValue: (value: any) => (value as number).toLocaleString('vi-VN'),
     parseValue: (value: string) => parseFloat(value.replace(/[^\d]/g, '')) || 0
   },
   {
@@ -60,7 +95,7 @@ const tinChapSpecificFields: FieldConfig[] = [
     required: true,
     icon: DollarSign,
     gridCols: 1,
-    formatValue: (value: number) => value.toLocaleString('vi-VN'),
+    formatValue: (value: any) => (value as number).toLocaleString('vi-VN'),
     parseValue: (value: string) => parseFloat(value.replace(/[^\d]/g, '')) || 0
   }
 ];
@@ -88,7 +123,7 @@ const traGopSpecificFields: FieldConfig[] = [
     required: true,
     icon: DollarSign,
     gridCols: 1,
-    formatValue: (value: number) => value.toLocaleString('vi-VN'),
+    formatValue: (value: any) => (value as number).toLocaleString('vi-VN'),
     parseValue: (value: string) => parseFloat(value.replace(/[^\d]/g, '')) || 0
   }
 ];
@@ -106,6 +141,9 @@ export const contractConfigs: Record<ContractType, ContractModalConfig> = {
       ...tinChapSpecificFields
     ],
     defaultValues: {
+      user_source: 'new',
+      user_id: null,
+      user_search: null,
       ho_ten: '',
       ngay_vay: new Date(),
       so_tien_vay: 0,
@@ -126,6 +164,9 @@ export const contractConfigs: Record<ContractType, ContractModalConfig> = {
       ...traGopSpecificFields
     ],
     defaultValues: {
+      user_source: 'new',
+      user_id: null,
+      user_search: null,
       ho_ten: '',
       ngay_vay: new Date(),
       so_tien_vay: 0,

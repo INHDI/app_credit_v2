@@ -265,7 +265,8 @@ def create_tin_chap(db: Session, tin_chap: TinChapCreate, ma_hd: str) -> TinChap
             SoTienVay=tin_chap.SoTienVay,
             KyDong=tin_chap.KyDong,
             LaiSuat=tin_chap.LaiSuat,
-            TrangThai=trang_thai
+            TrangThai=trang_thai,
+            user_id=tin_chap.user_id  # Liên kết người nợ (nếu có)
         )
         
         db.add(db_tin_chap)

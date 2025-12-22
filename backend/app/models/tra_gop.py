@@ -1,7 +1,7 @@
 """
 TraGop model - Trả góp (Installment payment)
 """
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from app.core.database import Base
 import datetime
 
@@ -20,4 +20,5 @@ class TraGop(Base):
     SoLanTra = Column(Integer, nullable=False, default=0)  # Number of times to pay - Tổng số lần phải trả
     LaiSuat = Column(Integer, nullable=False)  # Fixed interest amount (VNĐ)
     TrangThai = Column(String, nullable=False)  # [TrangThaiThanhToan, TrangThaiNgayThanhToan]
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Liên kết người nợ (optional)
 

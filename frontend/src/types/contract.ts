@@ -2,72 +2,78 @@ import React from 'react';
 
 // Generic contract form data interface
 export interface BaseContractFormData {
-  ho_ten: string;
-  ngay_vay: Date;
+    ho_ten: string;
+    ngay_vay: Date;
 }
 
 // Specific contract types extending base
 export interface TinChapFormData extends BaseContractFormData {
-  so_tien_vay: number;
-  ky_dong: number;
-  lai_suat: number;
+    so_tien_vay: number;
+    ky_dong: number;
+    lai_suat: number;
 }
 
 export interface TraGopFormData extends BaseContractFormData {
-  so_tien_vay: number;
-  ky_dong: number;
-  so_lan_tra: number;
-  lai_suat: number;
+    so_tien_vay: number;
+    ky_dong: number;
+    so_lan_tra: number;
+    lai_suat: number;
 }
 
 // Field configuration types
-export type FieldType = 
-  | "text" 
-  | "number" 
-  | "currency" 
-  | "date" 
-  | "select" 
-  | "textarea" 
-  | "email" 
-  | "phone";
+export type FieldType =
+    | "text"
+    | "number"
+    | "currency"
+    | "date"
+    | "select"
+    | "textarea"
+    | "email"
+    | "phone"
+    | "user-search"
+    | "radio-group";
 
 export interface SelectOption {
-  value: string;
-  label: string;
+    value: string;
+    label: string;
 }
 
 export interface FieldConfig {
-  key: string;
-  label: string;
-  type: FieldType;
-  placeholder?: string;
-  required?: boolean;
-  disabled?: boolean; // For read-only fields
-  icon?: React.ComponentType<{ className?: string }>;
-  options?: SelectOption[];
-  gridCols?: number; // For responsive grid layout
-  validation?: {
-    min?: number;
-    max?: number;
-    pattern?: string;
-    message?: string;
-  };
-  formatValue?: (value: unknown) => string;
-  parseValue?: (value: string) => unknown;
+    key: string;
+    label: string;
+    type: FieldType;
+    placeholder?: string;
+    required?: boolean;
+    disabled?: boolean; // For read-only fields
+    icon?: React.ComponentType<{ className?: string }>;
+    options?: SelectOption[];
+    gridCols?: number; // For responsive grid layout
+    validation?: {
+        min?: number;
+        max?: number;
+        pattern?: string;
+        message?: string;
+    };
+    formatValue?: (value: unknown) => string;
+    parseValue?: (value: string) => unknown;
+    // Conditional rendering
+    condition?: (formData: any) => boolean;
+    // Side effects when value changes (e.g. populating other fields)
+    onSelectSideEffect?: (value: any, currentFormData: any) => Record<string, any>;
 }
 
 export interface ContractModalConfig {
-  title: string;
-  fields: FieldConfig[];
-  defaultValues: Record<string, unknown>;
-  gridLayout?: {
-    cols: number;
-    gap: number;
-  };
+    title: string;
+    fields: FieldConfig[];
+    defaultValues: Record<string, unknown>;
+    gridLayout?: {
+        cols: number;
+        gap: number;
+    };
 }
 
 // Contract type enum
 export enum ContractType {
-  TIN_CHAP = "tin_chap",
-  TRA_GOP = "tra_gop"
+    TIN_CHAP = "tin_chap",
+    TRA_GOP = "tra_gop"
 }

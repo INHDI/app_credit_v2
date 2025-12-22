@@ -1,4 +1,5 @@
 import { API_CONFIG, API_HEADERS, ENV_CONFIG } from '@/config/config';
+import { getAuthHeaders } from './authApi';
 
 // API Response Types
 export interface ContractCreateResponse {
@@ -37,7 +38,8 @@ export const transformTinChapToBackend = (data: any) => {
     NgayVay: data.ngay_vay.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD
     SoTienVay: data.so_tien_vay,
     KyDong: data.ky_dong,
-    LaiSuat: data.lai_suat
+    LaiSuat: data.lai_suat,
+    user_id: data.user_id // Include user_id if present
   };
 };
 
@@ -48,7 +50,8 @@ export const transformTraGopToBackend = (data: any) => {
     SoTienVay: data.so_tien_vay,
     KyDong: data.ky_dong,
     SoLanTra: data.so_lan_tra,
-    LaiSuat: data.lai_suat
+    LaiSuat: data.lai_suat,
+    user_id: data.user_id // Include user_id if present
   };
 };
 
@@ -56,7 +59,10 @@ export const transformTraGopToBackend = (data: any) => {
 export const createTinChapContract = async (data: any): Promise<ContractCreateResponse> => {
   const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.TIN_CHAP}`, {
     method: 'POST',
-    headers: API_HEADERS.JSON,
+    headers: {
+      ...API_HEADERS.JSON,
+      ...getAuthHeaders()
+    },
     body: JSON.stringify(transformTinChapToBackend(data))
   });
 
@@ -70,7 +76,10 @@ export const createTinChapContract = async (data: any): Promise<ContractCreateRe
 export const createTraGopContract = async (data: any): Promise<ContractCreateResponse> => {
   const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.TRA_GOP}`, {
     method: 'POST',
-    headers: API_HEADERS.JSON,
+    headers: {
+      ...API_HEADERS.JSON,
+      ...getAuthHeaders()
+    },
     body: JSON.stringify(transformTraGopToBackend(data))
   });
 
@@ -84,7 +93,10 @@ export const createTraGopContract = async (data: any): Promise<ContractCreateRes
 export const createLichSuTraLai = async (maHD: string): Promise<LichSuTraLaiResponse> => {
   const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}?ma_hd=${maHD}`, {
     method: 'POST',
-    headers: API_HEADERS.JSON_ACCEPT
+    headers: {
+      ...API_HEADERS.JSON_ACCEPT,
+      ...getAuthHeaders()
+    }
   });
 
   if (!response.ok) {
@@ -100,7 +112,7 @@ export const createContractWithPaymentHistory = async (
   data: any
 ): Promise<{ contractResponse: ContractCreateResponse; paymentResponse: LichSuTraLaiResponse }> => {
   // Step 1: Create contract
-  const contractResponse = contractType === 'tin-chap' 
+  const contractResponse = contractType === 'tin-chap'
     ? await createTinChapContract(data)
     : await createTraGopContract(data);
 
@@ -123,7 +135,10 @@ export const createContractWithPaymentHistory = async (
 export const updateTinChapContract = async (maHD: string, data: any): Promise<ContractCreateResponse> => {
   const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.TIN_CHAP}/${maHD}`, {
     method: 'PUT',
-    headers: API_HEADERS.JSON,
+    headers: {
+      ...API_HEADERS.JSON,
+      ...getAuthHeaders()
+    },
     body: JSON.stringify(transformTinChapToBackend(data))
   });
 
@@ -138,7 +153,10 @@ export const updateTinChapContract = async (maHD: string, data: any): Promise<Co
 export const updateTraGopContract = async (maHD: string, data: any): Promise<ContractCreateResponse> => {
   const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.TRA_GOP}/${maHD}`, {
     method: 'PUT',
-    headers: API_HEADERS.JSON,
+    headers: {
+      ...API_HEADERS.JSON,
+      ...getAuthHeaders()
+    },
     body: JSON.stringify(transformTraGopToBackend(data))
   });
 
@@ -163,7 +181,10 @@ export const updateContractCustomerName = async (
 
   const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${endpoint}/${maHD}`, {
     method: 'PUT',
-    headers: API_HEADERS.JSON,
+    headers: {
+      ...API_HEADERS.JSON,
+      ...getAuthHeaders()
+    },
     body: JSON.stringify({ HoTen: hoTen })
   });
 
@@ -189,7 +210,10 @@ export const updateContractCustomerName = async (
 export const deleteLichSuByContract = async (maHD: string): Promise<any> => {
   const response = await fetch(`${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/contract/update/${maHD}`, {
     method: 'DELETE',
-    headers: API_HEADERS.JSON_ACCEPT
+    headers: {
+      ...API_HEADERS.JSON_ACCEPT,
+      ...getAuthHeaders()
+    }
   });
 
   if (!response.ok) {
@@ -209,7 +233,7 @@ export const updateContractWithPaymentHistory = async (
   data: any
 ): Promise<{ contractResponse: ContractCreateResponse; deleteResponse: any; paymentResponse: LichSuTraLaiResponse }> => {
   // Step 1: Update contract
-  const contractResponse = contractType === 'tin-chap' 
+  const contractResponse = contractType === 'tin-chap'
     ? await updateTinChapContract(maHD, data)
     : await updateTraGopContract(maHD, data);
 
@@ -220,7 +244,7 @@ export const updateContractWithPaymentHistory = async (
   // Step 2: Delete old payment history (only if SoTien = 0)
   try {
     const deleteResponse = await deleteLichSuByContract(maHD);
-    
+
     // Step 3: Create new payment history
     const paymentResponse = await createLichSuTraLai(maHD);
 

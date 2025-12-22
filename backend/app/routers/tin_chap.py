@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session
 from typing import List, Any, Dict
 
 from app.core.database import get_db
+from app.core.deps import require_admin
+from app.core.enums import UserRole
+from app.models.user import User
 from app.schemas.tin_chap import TinChapCreate, TinChapResponse, TinChapUpdate, TinChap
 from app.schemas.response import ApiResponse
 from app.crud import tin_chap as crud_tin_chap
@@ -19,8 +22,12 @@ router = APIRouter(
 
 
 @router.post("", response_model=ApiResponse[TinChap], status_code=201)
-async def create_tin_chap(tin_chap: TinChapCreate, db: Session = Depends(get_db)):
-    """Create a new TinChap contract"""
+async def create_tin_chap(
+    tin_chap: TinChapCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Create a new TinChap contract (Admin only)"""
     ma_hd = generate_tin_chap_id(db)
     result = crud_tin_chap.create_tin_chap(db=db, tin_chap=tin_chap, ma_hd=ma_hd)
     # Convert SQLAlchemy model to Pydantic schema
@@ -54,9 +61,10 @@ async def get_all_tin_chap(
     sort_dir: str = "desc",
     today_only: bool = False,
     server_sort: bool = True,
-    db: Session = Depends(get_db)
-    ):
-    """Get all TinChap contracts with filter/search/sort/pagination with totals"""
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Get all TinChap contracts with filter/search/sort/pagination (Admin only)"""
     result = crud_tin_chap.get_tin_chaps(
         db=db,
         status=status,
@@ -72,8 +80,12 @@ async def get_all_tin_chap(
 
 
 @router.get("/{ma_hd}", response_model=ApiResponse[TinChapResponse])
-async def get_tin_chap_by_id(ma_hd: str, db: Session = Depends(get_db)):
-    """Get a specific TinChap contract by MaHD"""
+async def get_tin_chap_by_id(
+    ma_hd: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Get a specific TinChap contract by MaHD (Admin only)"""
     tin_chap = crud_tin_chap.get_tin_chap_with_history(db=db, ma_hd=ma_hd)
     if not tin_chap:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng tín chấp")
@@ -81,8 +93,13 @@ async def get_tin_chap_by_id(ma_hd: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{ma_hd}", response_model=ApiResponse[TinChap])
-async def update_tin_chap(ma_hd: str, tin_chap_update: TinChapUpdate, db: Session = Depends(get_db)):
-    """Update a TinChap contract"""
+async def update_tin_chap(
+    ma_hd: str, 
+    tin_chap_update: TinChapUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Update a TinChap contract (Admin only)"""
     db_tin_chap = crud_tin_chap.update_tin_chap(db=db, ma_hd=ma_hd, tin_chap_update=tin_chap_update)
     if not db_tin_chap:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng tín chấp")
@@ -108,8 +125,12 @@ async def update_tin_chap(ma_hd: str, tin_chap_update: TinChapUpdate, db: Sessio
 
 
 @router.delete("/{ma_hd}", response_model=ApiResponse[Any])
-async def delete_tin_chap(ma_hd: str, db: Session = Depends(get_db)):
-    """Delete a TinChap contract"""
+async def delete_tin_chap(
+    ma_hd: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Delete a TinChap contract (Admin only)"""
     success = crud_tin_chap.delete_tin_chap(db=db, ma_hd=ma_hd)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng tín chấp")
@@ -135,8 +156,10 @@ async def delete_tin_chap(ma_hd: str, db: Session = Depends(get_db)):
 async def tra_goc_tin_chap(
     ma_hd: str, 
     so_tien_tra_goc: int,
-    db: Session = Depends(get_db)):
-    """Trả gốc hợp đồng tín chấp"""
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Trả gốc hợp đồng tín chấp (Admin only)"""
     success = crud_tin_chap.tra_goc_tin_chap(db=db, ma_hd=ma_hd, so_tien_tra_goc=so_tien_tra_goc)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng tín chấp")

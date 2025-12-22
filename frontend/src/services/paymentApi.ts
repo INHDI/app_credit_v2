@@ -1,4 +1,5 @@
 import { API_CONFIG, ENV_CONFIG, API_HEADERS } from '@/config/config';
+import { getAuthHeaders } from './authApi';
 
 export interface BasicApiResponse<T = unknown> {
   success: boolean;
@@ -12,7 +13,10 @@ export async function payInterestByRecord(stt: number | string, amount: number):
   const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/pay/${stt}?so_tien=${amount}`;
   const resp = await fetch(url, {
     method: 'POST',
-    headers: API_HEADERS.JSON_ACCEPT,
+    headers: {
+      ...API_HEADERS.JSON_ACCEPT,
+      ...getAuthHeaders()
+    },
   });
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}`);
@@ -25,19 +29,26 @@ export async function payInterestByContract(maHD: string, amount: number): Promi
   const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/payHD/${maHD}?so_tien=${amount}`;
   const resp = await fetch(url, {
     method: 'POST',
-    headers: API_HEADERS.JSON_ACCEPT,
+    headers: {
+      ...API_HEADERS.JSON_ACCEPT,
+      ...getAuthHeaders()
+    },
   });
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}`);
   }
   return await resp.json();
 }
+
 // POST /lich-su-tra-lai/pay-full/{MaHD}
 export async function payFullByContract(maHD: string, tienLai: number = 0): Promise<BasicApiResponse> {
   const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/pay-full/${maHD}?tien_lai=${tienLai}`;
   const resp = await fetch(url, {
     method: 'POST',
-    headers: API_HEADERS.JSON_ACCEPT,
+    headers: {
+      ...API_HEADERS.JSON_ACCEPT,
+      ...getAuthHeaders()
+    },
   });
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}`);
@@ -51,7 +62,10 @@ export async function payPrincipalTinChap(maHD: string, amount: number): Promise
   const url = `${base}/tin-chap/tra-goc/${maHD}?so_tien_tra_goc=${amount}`;
   const resp = await fetch(url, {
     method: 'PUT',
-    headers: API_HEADERS.JSON_ACCEPT,
+    headers: {
+      ...API_HEADERS.JSON_ACCEPT,
+      ...getAuthHeaders()
+    },
   });
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}`);
@@ -67,7 +81,10 @@ export async function updatePaymentHistory(
   const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/${maHD}?tien_da_tra=${tienDaTra}`;
   const resp = await fetch(url, {
     method: 'PUT',
-    headers: API_HEADERS.JSON_ACCEPT,
+    headers: {
+      ...API_HEADERS.JSON_ACCEPT,
+      ...getAuthHeaders()
+    },
   });
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}`);
@@ -80,7 +97,10 @@ export async function deletePaymentToday(maHD: string): Promise<BasicApiResponse
   const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/delete_thanh_toan?ma_hd=${encodeURIComponent(maHD)}`;
   const resp = await fetch(url, {
     method: 'DELETE',
-    headers: API_HEADERS.JSON_ACCEPT,
+    headers: {
+      ...API_HEADERS.JSON_ACCEPT,
+      ...getAuthHeaders()
+    },
   });
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}`);
@@ -93,7 +113,10 @@ export async function getPaymentHistoryByContract(maHD: string): Promise<BasicAp
   const url = `${ENV_CONFIG.API_BASE_URL}${API_CONFIG.ENDPOINTS.LICH_SU_TRA_LAI}/contract/${maHD}`;
   const resp = await fetch(url, {
     method: 'GET',
-    headers: API_HEADERS.JSON_ACCEPT,
+    headers: {
+      ...API_HEADERS.JSON_ACCEPT,
+      ...getAuthHeaders()
+    },
   });
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}`);

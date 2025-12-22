@@ -2,11 +2,14 @@
 Dashboard API routes
 """
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+
 from app.schemas.response import ApiResponse
 from app.schemas.dashboard import DashboardResponse
 from app.core.database import get_db
 from app.core.enums import TimePeriod
-from sqlalchemy.orm import Session
+from app.core.deps import require_admin
+from app.models.user import User
 from app.crud import dashboard as crud_dashboard
 
 router = APIRouter(
@@ -20,9 +23,10 @@ async def get_dashboard(
         default="all",
         description="Mốc thời gian: all, this_month, this_quarter, this_year"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
 ):
-    """Get dashboard data with time period filter"""
+    """Get dashboard data with time period filter (Admin only)"""
     # Validate time_period
     if time_period not in TimePeriod.list_values():
         time_period = TimePeriod.ALL.value
