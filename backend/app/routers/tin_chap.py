@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List, Any, Dict
 
 from app.core.database import get_db
-from app.core.deps import require_admin
+from app.core.deps import require_admin, require_admin_or_collector
 from app.core.enums import UserRole
 from app.models.user import User
 from app.schemas.tin_chap import TinChapCreate, TinChapResponse, TinChapUpdate, TinChap
@@ -62,9 +62,9 @@ async def get_all_tin_chap(
     today_only: bool = False,
     server_sort: bool = True,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Get all TinChap contracts with filter/search/sort/pagination (Admin only)"""
+    """Get all TinChap contracts with filter/search/sort/pagination (Admin and Collector)"""
     result = crud_tin_chap.get_tin_chaps(
         db=db,
         status=status,
@@ -83,7 +83,7 @@ async def get_all_tin_chap(
 async def get_tin_chap_by_id(
     ma_hd: str, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
     """Get a specific TinChap contract by MaHD (Admin only)"""
     tin_chap = crud_tin_chap.get_tin_chap_with_history(db=db, ma_hd=ma_hd)
@@ -157,7 +157,7 @@ async def tra_goc_tin_chap(
     ma_hd: str, 
     so_tien_tra_goc: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
     """Trả gốc hợp đồng tín chấp (Admin only)"""
     success = crud_tin_chap.tra_goc_tin_chap(db=db, ma_hd=ma_hd, so_tien_tra_goc=so_tien_tra_goc)

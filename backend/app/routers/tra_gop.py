@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List, Any, Dict
 
 from app.core.database import get_db
-from app.core.deps import require_admin
+from app.core.deps import require_admin, require_admin_or_collector
 from app.core.enums import UserRole
 from app.models.user import User
 from app.schemas.tra_gop import TraGopCreate, TraGopResponse, TraGopUpdate, TraGop
@@ -62,9 +62,9 @@ async def get_all_tra_gop(
     today_only: bool = False,
     server_sort: bool = True,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Get all TraGop contracts with filter/search/sort/pagination (Admin only)"""
+    """Get all TraGop contracts with filter/search/sort/pagination (Admin and Collector)"""
     result = crud_tra_gop.get_tra_gops(
         db=db,
         status=status,
@@ -83,7 +83,7 @@ async def get_all_tra_gop(
 async def get_tra_gop_by_id(
     ma_hd: str, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
     """Get a specific TraGop contract by MaHD (Admin only)"""
     tra_gop = crud_tra_gop.get_tra_gop_with_history(db=db, ma_hd=ma_hd)

@@ -8,6 +8,7 @@ interface AuthContextState {
     user: User | null;
     isLoading: boolean;
     isAuthenticated: boolean;
+    isAdmin: boolean;
     login: (credentials: LoginRequest) => Promise<void>;
     register: (data: RegisterRequest) => Promise<User>;
     logout: () => Promise<void>;
@@ -110,6 +111,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         user,
         isLoading,
         isAuthenticated,
+        isAdmin: user?.role === 'admin',
         login,
         register,
         logout,

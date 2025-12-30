@@ -27,6 +27,8 @@ wheels/
 # Virtual Environment
 .venv
 .env
+credentials.json
+token.json
 
 # Database
 *.db

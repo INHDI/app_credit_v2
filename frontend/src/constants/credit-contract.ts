@@ -6,6 +6,7 @@ import {
   PiggyBank,
   History,
   Users,
+  Settings,
 } from "lucide-react"
 
 // Role types
@@ -54,6 +55,17 @@ export const NAVIGATION_SECTIONS: NavigationSection[] = [
         badge: undefined,
         onClick: undefined,
         roles: ['debtor'], // Debtor Dashboard
+      },
+      {
+        id: "payment",
+        title: "Thanh toán",
+        icon: CreditCard,
+        href: "/debtor/thanh-toan",
+        iconBg: "bg-emerald-100",
+        hoverColor: "hover:bg-emerald-50 hover:text-emerald-700",
+        badge: undefined,
+        onClick: undefined,
+        roles: ['debtor'],
       },
       {
         id: "no-phai-thu",
@@ -132,6 +144,17 @@ export const NAVIGATION_SECTIONS: NavigationSection[] = [
         hoverColor: "hover:bg-amber-50 hover:text-amber-700",
         badge: undefined,
         href: "/users",
+        onClick: undefined,
+        roles: ['admin'], // Admin only
+      },
+      {
+        id: "settings",
+        title: "Cấu hình",
+        icon: Settings,
+        iconBg: "bg-slate-100",
+        hoverColor: "hover:bg-slate-50 hover:text-slate-700",
+        badge: undefined,
+        href: "/admin/settings",
         onClick: undefined,
         roles: ['admin'], // Admin only
       },

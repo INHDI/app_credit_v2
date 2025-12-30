@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/Modal";
 import { formatCurrency } from "@/utils/formatters";
-import { 
-  Calendar, 
-  Clock, 
+import {
+  Calendar,
+  Clock,
   CheckCircle,
   ArrowRight
 } from 'lucide-react';
@@ -36,12 +36,14 @@ interface PaymentScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
   contract: any; // CreditContract type
+  onFetchHistory?: (maHD: string) => Promise<any[]>;
 }
 
 export default function PaymentScheduleModal({
   isOpen,
   onClose,
-  contract
+  contract,
+  onFetchHistory
 }: PaymentScheduleModalProps) {
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
   const [nextPayment, setNextPayment] = useState<PaymentHistoryItem | null>(null);
@@ -51,11 +53,11 @@ export default function PaymentScheduleModal({
   const mapHistoryItems = useCallback((source: any[] = []): PaymentHistoryItem[] => {
     return source.map((item: any) => ({
       id: `${contract?.MaHD || contract?.ma_hop_dong}-${item.Stt}`,
-      thoi_gian: item.Ngay,
-      so_tien: item.SoTien,
-      so_tien_tra: item.TienDaTra || 0,
-      trang_thai: item.TrangThaiThanhToan === 'Đóng đủ' || item.TrangThaiThanhToan === 'Đã tất toán',
-      noi_dung: item.NoiDung,
+      thoi_gian: item.Ngay || item.thoi_gian,
+      so_tien: item.SoTien || item.so_tien,
+      so_tien_tra: item.TienDaTra || item.so_tien_tra || 0,
+      trang_thai: (item.TrangThaiThanhToan === 'Đóng đủ' || item.TrangThaiThanhToan === 'Đã tất toán') || item.trang_thai,
+      noi_dung: item.NoiDung || item.noi_dung,
       Stt: item.Stt,
       MaHD: item.MaHD,
       Ngay: item.Ngay,
@@ -79,8 +81,12 @@ export default function PaymentScheduleModal({
       const maHD = contract.MaHD || contract.ma_hop_dong;
       let data: any[] = [];
       try {
-        const response = await getPaymentHistoryByContract(maHD);
-        data = Array.isArray(response?.data) ? response.data : [];
+        if (onFetchHistory) {
+          data = await onFetchHistory(maHD);
+        } else {
+          const response = await getPaymentHistoryByContract(maHD);
+          data = Array.isArray(response?.data) ? response.data : [];
+        }
       } catch (error) {
         console.error("Error fetching payment schedule:", error);
       }
@@ -101,7 +107,7 @@ export default function PaymentScheduleModal({
     } finally {
       setLoading(false);
     }
-  }, [contract, mapHistoryItems]);
+  }, [contract, mapHistoryItems, onFetchHistory]);
 
   useEffect(() => {
     if (isOpen) {
@@ -124,10 +130,10 @@ export default function PaymentScheduleModal({
     today.setHours(0, 0, 0, 0);
     const paymentDate = new Date(dateString);
     paymentDate.setHours(0, 0, 0, 0);
-    
+
     const diffTime = paymentDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return "Hôm nay";
     if (diffDays === 1) return "Ngày mai";
     if (diffDays < 0) return `${Math.abs(diffDays)} ngày trước`;
@@ -140,7 +146,7 @@ export default function PaymentScheduleModal({
     if (trangThaiNgay === 'Quá kỳ đóng lãi') return "text-red-600 bg-red-50 border-red-200 animate-pulse";
     if (trangThaiNgay === 'Đến hạn') return "text-indigo-600 bg-indigo-50 border-indigo-200";
     if (trangThaiNgay === 'Chưa đến hạn') return "text-blue-600 bg-blue-50 border-blue-200";
-    
+
     // Fallback to days calculation
     if (daysUntil === "Hôm nay") return "text-red-600 bg-red-50 border-red-200";
     if (daysUntil.includes("ngày trước")) return "text-red-600 bg-red-50 border-red-200";
@@ -179,7 +185,7 @@ export default function PaymentScheduleModal({
                   <p className="font-bold text-lg text-slate-800">{contractInfo?.ten_khach_hang || contract?.HoTen || contract?.ten_khach_hang}</p>
                 </div>
               </div>
-              
+
               {/* Additional contract details if available */}
               {(contract?.NgayVay || contract?.SoTienVay || contract?.KyDong) && (
                 <div className="mt-4 pt-4 border-t border-blue-100">
@@ -213,27 +219,27 @@ export default function PaymentScheduleModal({
                 <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                   Kỳ thanh toán tiếp theo
                 </h4>
-                
+
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600">Ngày thanh toán:</span>
                     <span className="font-semibold text-slate-800">{formatDate(nextPayment.thoi_gian)}</span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600">Thời gian còn lại:</span>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(getDaysUntilPayment(nextPayment.thoi_gian), nextPayment.TrangThaiNgayThanhToan)}`}>
                       {nextPayment.TrangThaiNgayThanhToan || getDaysUntilPayment(nextPayment.thoi_gian)}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600">Số tiền cần trả:</span>
                     <span className="font-bold text-lg text-emerald-700">
                       {formatCurrency(nextPayment.so_tien)}
                     </span>
                   </div>
-                  
+
                   {nextPayment.so_tien_tra > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-slate-600">Đã trả:</span>
@@ -242,14 +248,14 @@ export default function PaymentScheduleModal({
                       </span>
                     </div>
                   )}
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600">Còn lại:</span>
                     <span className="font-bold text-lg text-red-600">
                       {formatCurrency(nextPayment.so_tien - nextPayment.so_tien_tra)}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600">Nội dung:</span>
                     <span className="font-medium text-slate-800">{nextPayment.noi_dung}</span>
@@ -269,7 +275,7 @@ export default function PaymentScheduleModal({
             {(() => {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
-              
+
               const upcomingPayments = paymentHistory
                 .filter(item => {
                   const paymentDate = new Date(item.thoi_gian);
@@ -278,14 +284,14 @@ export default function PaymentScheduleModal({
                 })
                 .filter(item => item.TrangThaiNgayThanhToan === 'Chưa đến hạn')
                 .sort((a, b) => new Date(a.thoi_gian).getTime() - new Date(b.thoi_gian).getTime());
-              
+
               return upcomingPayments.length > 0 && (
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200">
                   <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
                     <Clock className="h-5 w-5 text-amber-600" />
                     Các kỳ thanh toán chưa đến hạn
                   </h4>
-                  
+
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {upcomingPayments
                       .slice(0, 5) // Chỉ hiển thị 5 kỳ gần nhất

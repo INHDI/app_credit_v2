@@ -1,20 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/providers/AuthContext';
 import { API_CONFIG, createApiUrl } from '@/config/config';
 import { getAuthHeaders } from '@/services/authApi';
+import { PageHeader } from "@/components/layout/PageHeader";
+import DebtorFilter from './DebtorFilter';
+import DebtorSummary from './DebtorSummary';
+import DebtorTable from './DebtorTable';
+import GenericContractDetailModal from '@/components/ui/GenericContractDetailModal';
+import PaymentModal from '@/components/ui/PaymentModal';
+import QRDisplayModal from '@/components/ui/QRDisplayModal';
+import PaymentScheduleModal from '@/components/ui/PaymentScheduleModal'; // Added import
 import {
     FileText,
-    Calendar,
     DollarSign,
-    TrendingUp,
-    Clock,
-    CheckCircle,
     AlertCircle,
-    User
+    TrendingUp,
+    Calendar,
+    Receipt
 } from 'lucide-react';
+import { ContractDetailConfig } from '@/types/contractDetail';
 
+// --- Interfaces ---
 interface Contract {
     MaHD: string;
     HoTen: string;
@@ -24,40 +32,73 @@ interface Contract {
     LaiSuat: number;
     TrangThai: string;
     contract_type: 'tin_chap' | 'tra_gop';
+    // Enriched fields
+    LaiDaTra?: number;
+    GocConLai?: number;
+    LaiConLai?: number;
+    DaThanhToan?: number;
+    ConLai?: number;
+    SoLanTra?: number;
 }
 
-interface PaymentSchedule {
-    MaHD: string;
-    Ngay: string;
-    SoTien: number;
-    TrangThaiThanhToan: string;
-    days_until_due: number;
+interface PaymentData {
+    maHD: string;
+    totalAmountDue: number; // Tổng nợ cần trả (Overdue + Current Period)
+    periodAmount: number;   // Số tiền 1 kỳ (cho hint partial payment)
 }
 
-interface Summary {
-    total_contracts: number;
-    total_borrowed: number;
-    total_paid: number;
-    total_remaining_interest: number;
-}
+// Config for Detail Modal
+const tinChapConfig: ContractDetailConfig = {
+    title: "Chi tiết hợp đồng tín chấp",
+    contractType: "tin_chap",
+    tabs: [
+        { id: "overview", label: "Tổng quan", icon: FileText },
+        { id: "payments", label: "Lịch trả lãi", icon: Calendar },
+    ],
+    apiEndpoint: "/tin-chap",
+    paymentApiEndpoint: "/tin-chap/payment"
+};
 
-interface PaymentHistory {
-    MaHD: string;
-    Ngay: string;
-    SoTien: number;
-    TienDaTra: number;
-    TrangThaiThanhToan: string;
-}
+const traGopConfig: ContractDetailConfig = {
+    title: "Chi tiết hợp đồng trả góp",
+    contractType: "tra_gop",
+    tabs: [
+        { id: "overview", label: "Tổng quan", icon: FileText },
+        { id: "payments", label: "Lịch trả góp", icon: Calendar },
+    ],
+    apiEndpoint: "/tra-gop",
+    paymentApiEndpoint: "/tra-gop/payment"
+};
 
 export default function DebtorPortalPage() {
     const { user } = useAuth();
     const [contracts, setContracts] = useState<Contract[]>([]);
-    const [schedule, setSchedule] = useState<PaymentSchedule[]>([]);
-    const [summary, setSummary] = useState<Summary | null>(null);
-    const [history, setHistory] = useState<PaymentHistory[]>([]);
+    const [summary, setSummary] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [activeTab, setActiveTab] = useState<'overview' | 'contracts' | 'schedule' | 'history'>('overview');
+
+    // Filters
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedStatus, setSelectedStatus] = useState('all');
+    const [selectedTimeRange, setSelectedTimeRange] = useState('all');
+
+    // Modals
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+    const [detailInitialTab, setDetailInitialTab] = useState("overview");
+
+    // Payment Schedule Modal
+    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+    const [selectedScheduleContract, setSelectedScheduleContract] = useState<Contract | null>(null);
+
+    // Payment Modal
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+
+    // QR Modal
+    const [qrModal, setQrModal] = useState<{ isOpen: boolean; qrUrl: string | null; amount: number; maHD: string }>({
+        isOpen: false, qrUrl: null, amount: 0, maHD: ''
+    });
 
     useEffect(() => {
         fetchData();
@@ -70,29 +111,25 @@ export default function DebtorPortalPage() {
         try {
             const headers = { ...getAuthHeaders(), accept: 'application/json' };
 
-            // Fetch all data in parallel
-            const [contractsRes, scheduleRes, summaryRes, historyRes] = await Promise.all([
+            const [contractsRes, summaryRes] = await Promise.all([
                 fetch(createApiUrl(API_CONFIG.ENDPOINTS.DEBTOR_CONTRACTS), { headers }),
-                fetch(createApiUrl(API_CONFIG.ENDPOINTS.DEBTOR_SCHEDULE), { headers }),
                 fetch(createApiUrl(API_CONFIG.ENDPOINTS.DEBTOR_SUMMARY), { headers }),
-                fetch(createApiUrl(API_CONFIG.ENDPOINTS.DEBTOR_HISTORY), { headers }),
             ]);
 
-            if (!contractsRes.ok || !scheduleRes.ok || !summaryRes.ok || !historyRes.ok) {
-                throw new Error('Không thể tải dữ liệu');
+            const [contractsData, summaryData] = await Promise.all([
+                contractsRes.json(),
+                summaryRes.json(),
+            ]);
+
+            if (contractsData.success && contractsData.data) {
+                const tinChapContracts = (contractsData.data.tin_chap || []).map((c: any) => ({ ...c, contract_type: 'tin_chap' }));
+                const traGopContracts = (contractsData.data.tra_gop || []).map((c: any) => ({ ...c, contract_type: 'tra_gop' }));
+                setContracts([...tinChapContracts, ...traGopContracts]);
             }
 
-            const [contractsData, scheduleData, summaryData, historyData] = await Promise.all([
-                contractsRes.json(),
-                scheduleRes.json(),
-                summaryRes.json(),
-                historyRes.json(),
-            ]);
-
-            if (contractsData.success) setContracts(contractsData.data);
-            if (scheduleData.success) setSchedule(scheduleData.data);
-            if (summaryData.success) setSummary(summaryData.data);
-            if (historyData.success) setHistory(historyData.data);
+            if (summaryData.success && summaryData.data) {
+                setSummary(summaryData.data);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
         } finally {
@@ -100,273 +137,335 @@ export default function DebtorPortalPage() {
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    const handleViewDetail = (contract: Contract) => {
+        setSelectedContract(contract);
+        setDetailInitialTab("overview");
+        setDetailModalOpen(true);
     };
 
-    const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString('vi-VN', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
+    const handleViewSchedule = (contract: Contract) => {
+        setSelectedScheduleContract(contract);
+        setScheduleModalOpen(true);
+    };
+
+    const handleSettle = (contract: Contract) => {
+        // "Tất toán" means paying off remaining debt.
+        // For TinChap: Principal Remaining (GocConLai) + Interest Remaining (LaiConLai)
+        // For TraGop: Total Remaining (ConLai)
+
+        const isTinChap = contract.contract_type === 'tin_chap';
+        let totalDue = 0;
+        let periodAmount = 0;
+
+        if (isTinChap) {
+            // For TinChap, period amount is distinct from settlement.
+            periodAmount = contract.LaiSuat;
+
+            const remainingPrincipal = contract.GocConLai || 0;
+            const remainingInterest = contract.LaiConLai || 0;
+            totalDue = remainingPrincipal + remainingInterest;
+        } else {
+            const SoLanTra = (contract as any).SoLanTra || 1;
+            const totalLoan = Number(contract.SoTienVay) + Number(contract.LaiSuat);
+            periodAmount = Math.ceil(totalLoan / SoLanTra);
+
+            totalDue = contract.ConLai || 0;
+        }
+
+        if (totalDue <= 0) {
+            // Already settled or fully paid?
+            // Allow opening modal still? Or alert?
+            // But maybe user wants to pay partially even if logic says 0? No.
+            // Just warn.
+            alert('Hợp đồng này hiện không còn dư nợ để tất toán.');
+            // But keep open logic just in case enrichment is delayed? No.
+            return;
+        }
+
+        setPaymentData({
+            maHD: contract.MaHD,
+            totalAmountDue: totalDue,
+            periodAmount: periodAmount
         });
+        setPaymentModalOpen(true);
     };
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
-                    <p className="text-slate-500">Đang tải dữ liệu...</p>
-                </div>
-            </div>
-        );
-    }
+    const handleProcessPayment = async (maHD: string | number, amount: number) => {
+        try {
+            const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' };
+            const res = await fetch(createApiUrl('/debtor/generate-qr'), {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ ma_hd: maHD, amount: amount })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setQrModal({
+                    isOpen: true,
+                    maHD: maHD.toString(),
+                    amount: amount,
+                    qrUrl: data.data.qr_url
+                });
+                return Promise.resolve();
+            } else {
+                alert('Lỗi: ' + data.message);
+                return Promise.reject(data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Lỗi kết nối');
+            throw err;
+        }
+    };
+
+    // Mapping helper for GenericContractDetailModal
+    const getMappedContractDetail = (c: Contract | null) => {
+        if (!c) return null;
+        const isTinChap = c.contract_type === 'tin_chap';
+        return {
+            ma_hop_dong: c.MaHD,
+            ten_khach_hang: c.HoTen,
+            ngay_vay: c.NgayVay,
+            tong_tien_vay: c.SoTienVay,
+            lai_suat: c.LaiSuat,
+            status: c.TrangThai,
+            statusColor: c.TrangThai?.includes('Đã') || c.TrangThai?.includes('đủ') ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
+            customerInfo: `${c.HoTen} - ${c.MaHD}`,
+
+            // Conditional fields
+            daily_interest: isTinChap ? c.LaiSuat : 0, // Mapping 'LaiSuat' to daily_interest prop for display? 
+            // Generic modal uses 'daily_interest' label "Lãi/ngày" or similar. But `contract.kieu_lai_suat` used in Modal.
+            // Let's check logic:
+            // {config.contractType === 'tin_chap' ? `Lãi/${contract.kieu_lai_suat}` : 'Còn lại'}
+
+            kieu_lai_suat: isTinChap ? `${c.KyDong} ngày` : '',
+
+            // TraGop specific
+            so_ky_tra: c.SoLanTra || 0,
+
+            // Financials for bottom cards
+            total_interest_paid: c.LaiDaTra || (c.DaThanhToan) || 0,
+
+            // For Principal Payment Modal support (TinChap)
+            GocConLai: c.GocConLai,
+
+            // Extra props used by modal internally?
+            // It seems "contract" prop is fairly loose typed in usage based on modal code.
+        };
+    };
+
+    // Filter Logic
+    const filteredContracts = useMemo(() => {
+        return contracts.filter(c => {
+            const matchesSearch = c.MaHD.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.HoTen.toLowerCase().includes(searchTerm.toLowerCase());
+
+            let matchesStatus = true;
+            if (selectedStatus !== 'all') {
+                matchesStatus = c.TrangThai === selectedStatus;
+            }
+            return matchesSearch && matchesStatus;
+        });
+    }, [contracts, searchTerm, selectedStatus]);
+
+    // Summary Cards Data
+    const summaryCards = useMemo(() => {
+        if (!summary) return [];
+        return [
+            {
+                title: "Tổng hợp đồng",
+                value: String(summary.tong_hop_dong || 0),
+                subtitle: "Hợp đồng",
+                description: `${(summary.so_hop_dong_tin_chap || 0) + (summary.so_hop_dong_tra_gop || 0)} đang hoạt động`,
+                icon: FileText,
+                gradient: "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200",
+                iconBg: "bg-blue-100",
+                textColor: "text-blue-700",
+            },
+            {
+                title: "Tổng tiền cho vay",
+                value: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(summary.tong_vay || 0),
+                subtitle: "VNĐ",
+                description: "Tổng giá trị cho vay",
+                icon: DollarSign,
+                gradient: "bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200",
+                iconBg: "bg-emerald-100",
+                textColor: "text-emerald-700",
+            },
+            {
+                title: "Đã thu về",
+                value: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(summary.da_tra || 0),
+                subtitle: "VNĐ",
+                description: `Đã thanh toán`,
+                icon: TrendingUp,
+                gradient: "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200",
+                iconBg: "bg-green-100",
+                textColor: "text-green-700",
+            },
+            {
+                title: "Còn phải thu",
+                value: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(summary.con_lai || 0),
+                subtitle: "VNĐ",
+                description: "Số tiền chưa thanh toán",
+                icon: AlertCircle,
+                gradient: "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200",
+                iconBg: "bg-amber-100",
+                textColor: "text-amber-700",
+            },
+        ];
+    }, [summary]);
+
+    // Need to provide onLoadPaymentHistory prop to GenericContractDetailModal
+    // Usually fetching from /api/lich-su-tra-lai/{maHD}? 
+    // Or /debtor/payment-history API?
+    // GenericContractDetailModal expects `onLoadPaymentHistory` to return `PaymentHistoryItem[]`.
+    // We can wrap the call.
+    const loadPaymentHistory = async (maHD: string) => {
+        try {
+            // We can maybe reuse /debtor/payment-history but that is paginated for ALL.
+            // We probably need a specific endpoint or filter the all-history endpoint?
+            // Actually, `GenericContractDetailModal` logic usually calls specific API.
+            // Since we are reusing the component, we should probably providing a compliant function.
+            // However, allow Debtor to view history of specific contract?
+            // Simplest: Call the admin endpoint if allowed? Unlikely.
+            // Or call /debtor/payment-history and filter client side (not efficient but workaround)
+            // Better: Create /debtor/history/{maHD} ?
+            // Or filter the /debtor/payment-history endpoint by maHD?
+            // backend/app/routers/debtor.py: get_payment_history(page, page_size) - no maHD filter.
+
+            // Workaround: We don't have a direct API to get history for ONE contract for Debtor yet.
+            // But the modal NEEDS it to render "Lịch trả lãi".
+            // Let's check backend debtor.py again.
+            // It doesn't have it.
+
+            // Solution: Modify backend debtor.py to allow filtering by MaHD in get_payment_history?
+            // Or just return empty for now to avoid breaking?
+            // User asked "Xem lịch thanh toán" icon. This implies they want to see it.
+            // I should probably add backend support for it or use the existing "Schedule" endpoint?
+            // Schedule != History.
+            // GenericContractDetailModal shows History.
+            // If user wants "Xem lịch thanh toán" (Schedule), maybe I should show Schedule instead of History?
+            // But GenericContractDetailModal tabs say "Lịch trả lãi" ~ History.
+
+            // Let's assume for now I will use a dummy function that returns empty or tries to fetch from existing.
+            // Actually, the /debtor/payment-history endpoint queries all.
+            // I'll add a quick tool call to fix backend if needed.
+            // For now, let's just make it run without crashing.
+            return [];
+        } catch (e) {
+            console.error(e);
+            return [];
+        }
+    };
+
+    if (isLoading) return (
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="w-12 h-12 border-4 border-teal-200 border-t-teal-500 rounded-full animate-spin" />
+        </div>
+    );
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-teal-500 to-emerald-500 rounded-2xl p-6 text-white shadow-lg">
-                <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                        <User className="w-8 h-8" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold">Xin chào, {user?.ho_ten}</h1>
-                        <p className="text-teal-100">Tra cứu thông tin hợp đồng và thanh toán của bạn</p>
-                    </div>
-                </div>
-            </div>
+        <div>
+            <PageHeader
+                title={`Xin chào, ${user?.ho_ten}`}
+                description="Theo dõi và quản lý các khoản vay của bạn"
+                breadcrumbs={[
+                    { label: "Trang chủ", href: "/" },
+                    { label: "Tổng quan" }
+                ]}
+            />
 
-            {/* Error */}
-            {error && (
-                <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-center gap-3 text-red-600">
-                    <AlertCircle className="w-5 h-5" />
-                    <span>{error}</span>
-                </div>
+            <DebtorFilter
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                selectedStatus={selectedStatus}
+                setSelectedStatus={setSelectedStatus}
+                selectedTimeRange={selectedTimeRange}
+                setSelectedTimeRange={setSelectedTimeRange}
+            />
+
+            <DebtorSummary summaryCards={summaryCards} />
+
+            <DebtorTable
+                contracts={filteredContracts}
+                startIndex={0}
+                onViewDetail={handleViewDetail}
+                onViewSchedule={handleViewSchedule}
+                onPay={handleSettle}
+            />
+
+            {/* Modals */}
+            <GenericContractDetailModal
+                isOpen={detailModalOpen}
+                onClose={() => setDetailModalOpen(false)}
+                contract={getMappedContractDetail(selectedContract) as any}
+                config={selectedContract?.contract_type === 'tin_chap' ? tinChapConfig : traGopConfig}
+                initialTab={detailInitialTab}
+                // Mapping payment history load - using a fetch compatible with GenericContractDetailModal expectations
+                // For now, since we lack the specific API for debtor to get SINGLE contract history, 
+                // We might just pass an empty function or simplistic one. 
+                // But this might result in empty history tab.
+                onLoadPaymentHistory={async (maHD) => {
+                    // Temporary: Fetch all history and filter client side.
+                    // This is inefficient but works without backend changes immediately.
+                    const res = await fetch(createApiUrl(`/debtor/payment-history?page=1&page_size=1000`), {
+                        headers: getAuthHeaders()
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        return json.data.items.filter((p: any) => p.MaHD === maHD).map((p: any) => ({
+                            ...p,
+                            ngay_tra_lai: p.Ngay,
+                            so_tien_lai: p.SoTien,
+                            so_tien_tra: p.TienDaTra,
+                            ghi_chu: p.TrangThaiNgayThanhToan
+                        }));
+                    }
+                    return [];
+                }}
+            />
+
+            {paymentData && (
+                <PaymentModal
+                    isOpen={paymentModalOpen}
+                    onClose={() => setPaymentModalOpen(false)}
+                    paymentId={paymentData.maHD}
+                    paymentAmount={paymentData.totalAmountDue}
+                    tienCanThanhToanTheoKy={paymentData.periodAmount}
+                    onPaymentSuccess={() => {
+                        setPaymentModalOpen(false);
+                        fetchData();
+                    }}
+                    onProcessPayment={handleProcessPayment}
+                />
             )}
 
-            {/* Summary Cards */}
-            {summary && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <FileText className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500">Số hợp đồng</p>
-                                <p className="text-xl font-bold text-slate-800">{summary.total_contracts}</p>
-                            </div>
-                        </div>
-                    </div>
+            <PaymentScheduleModal
+                isOpen={scheduleModalOpen}
+                onClose={() => setScheduleModalOpen(false)}
+                contract={selectedScheduleContract}
+                onFetchHistory={async (maHD) => {
+                    // Call the new Debtor API endpoint
+                    const res = await fetch(createApiUrl(`/debtor/contract-history/${maHD}`), {
+                        headers: getAuthHeaders()
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        return json.data;
+                    }
+                    return [];
+                }}
+            />
 
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                                <DollarSign className="w-5 h-5 text-amber-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500">Tổng vay</p>
-                                <p className="text-lg font-bold text-slate-800">{formatCurrency(summary.total_borrowed)}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                                <CheckCircle className="w-5 h-5 text-emerald-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500">Đã trả</p>
-                                <p className="text-lg font-bold text-slate-800">{formatCurrency(summary.total_paid)}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                                <TrendingUp className="w-5 h-5 text-red-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500">Lãi còn lại</p>
-                                <p className="text-lg font-bold text-slate-800">{formatCurrency(summary.total_remaining_interest)}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Tabs */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="flex border-b border-slate-100">
-                    {[
-                        { key: 'overview', label: 'Tổng quan', icon: TrendingUp },
-                        { key: 'contracts', label: 'Hợp đồng', icon: FileText },
-                        { key: 'schedule', label: 'Lịch trả', icon: Calendar },
-                        { key: 'history', label: 'Lịch sử', icon: Clock },
-                    ].map((tab) => (
-                        <button
-                            key={tab.key}
-                            onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${activeTab === tab.key
-                                    ? 'text-teal-600 border-b-2 border-teal-500 bg-teal-50/50'
-                                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                                }`}
-                        >
-                            <tab.icon className="w-4 h-4" />
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="p-4">
-                    {/* Overview Tab */}
-                    {activeTab === 'overview' && (
-                        <div className="space-y-4">
-                            <h3 className="font-semibold text-slate-800">Lịch trả lãi sắp tới</h3>
-                            {schedule.length === 0 ? (
-                                <p className="text-slate-500 text-center py-8">Không có lịch trả nào sắp tới</p>
-                            ) : (
-                                <div className="space-y-2">
-                                    {schedule.slice(0, 5).map((item, index) => (
-                                        <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                                            <div>
-                                                <p className="font-medium text-slate-800">{item.MaHD}</p>
-                                                <p className="text-sm text-slate-500">{formatDate(item.Ngay)}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-semibold text-teal-600">{formatCurrency(item.SoTien)}</p>
-                                                <p className="text-xs text-slate-500">
-                                                    {item.days_until_due === 0 ? 'Hôm nay' :
-                                                        item.days_until_due < 0 ? `Quá hạn ${Math.abs(item.days_until_due)} ngày` :
-                                                            `Còn ${item.days_until_due} ngày`}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Contracts Tab */}
-                    {activeTab === 'contracts' && (
-                        <div className="space-y-3">
-                            {contracts.length === 0 ? (
-                                <p className="text-slate-500 text-center py-8">Không có hợp đồng nào</p>
-                            ) : (
-                                contracts.map((contract) => (
-                                    <div key={contract.MaHD} className="p-4 bg-slate-50 rounded-xl">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div>
-                                                <span className="font-semibold text-slate-800">{contract.MaHD}</span>
-                                                <span className="ml-2 text-xs px-2 py-1 bg-slate-200 rounded-full">
-                                                    {contract.contract_type === 'tin_chap' ? 'Tín chấp' : 'Trả góp'}
-                                                </span>
-                                            </div>
-                                            <span className={`text-xs px-2 py-1 rounded-full ${contract.TrangThai.includes('Đã tất toán')
-                                                    ? 'bg-emerald-100 text-emerald-700'
-                                                    : 'bg-amber-100 text-amber-700'
-                                                }`}>
-                                                {contract.TrangThai}
-                                            </span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 text-sm">
-                                            <div>
-                                                <span className="text-slate-500">Ngày vay:</span>
-                                                <span className="ml-2 text-slate-700">{formatDate(contract.NgayVay)}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500">Số tiền:</span>
-                                                <span className="ml-2 text-slate-700">{formatCurrency(contract.SoTienVay)}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500">Kỳ đóng:</span>
-                                                <span className="ml-2 text-slate-700">{contract.KyDong} ngày</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500">Lãi suất:</span>
-                                                <span className="ml-2 text-slate-700">{contract.LaiSuat}%</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
-
-                    {/* Schedule Tab */}
-                    {activeTab === 'schedule' && (
-                        <div className="space-y-2">
-                            {schedule.length === 0 ? (
-                                <p className="text-slate-500 text-center py-8">Không có lịch trả nào</p>
-                            ) : (
-                                schedule.map((item, index) => (
-                                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.TrangThaiThanhToan === 'Đóng đủ'
-                                                    ? 'bg-emerald-100'
-                                                    : item.days_until_due < 0
-                                                        ? 'bg-red-100'
-                                                        : 'bg-amber-100'
-                                                }`}>
-                                                {item.TrangThaiThanhToan === 'Đóng đủ' ? (
-                                                    <CheckCircle className="w-5 h-5 text-emerald-600" />
-                                                ) : (
-                                                    <Calendar className="w-5 h-5 text-amber-600" />
-                                                )}
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-slate-800">{item.MaHD}</p>
-                                                <p className="text-sm text-slate-500">{formatDate(item.Ngay)}</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-semibold text-teal-600">{formatCurrency(item.SoTien)}</p>
-                                            <p className={`text-xs ${item.TrangThaiThanhToan === 'Đóng đủ'
-                                                    ? 'text-emerald-600'
-                                                    : item.days_until_due < 0
-                                                        ? 'text-red-600'
-                                                        : 'text-slate-500'
-                                                }`}>
-                                                {item.TrangThaiThanhToan === 'Đóng đủ' ? 'Đã thanh toán' :
-                                                    item.days_until_due === 0 ? 'Hôm nay' :
-                                                        item.days_until_due < 0 ? `Quá hạn ${Math.abs(item.days_until_due)} ngày` :
-                                                            `Còn ${item.days_until_due} ngày`}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
-
-                    {/* History Tab */}
-                    {activeTab === 'history' && (
-                        <div className="space-y-2">
-                            {history.length === 0 ? (
-                                <p className="text-slate-500 text-center py-8">Chưa có lịch sử thanh toán</p>
-                            ) : (
-                                history.map((item, index) => (
-                                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                                        <div>
-                                            <p className="font-medium text-slate-800">{item.MaHD}</p>
-                                            <p className="text-sm text-slate-500">{formatDate(item.Ngay)}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-semibold text-emerald-600">+{formatCurrency(item.TienDaTra)}</p>
-                                            <p className="text-xs text-slate-500">{item.TrangThaiThanhToan}</p>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
+            <QRDisplayModal
+                isOpen={qrModal.isOpen}
+                onClose={() => {
+                    setQrModal(prev => ({ ...prev, isOpen: false }));
+                    fetchData();
+                }}
+                data={qrModal}
+            />
         </div>
     );
 }

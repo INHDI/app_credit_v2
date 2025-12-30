@@ -40,36 +40,29 @@ async def get_current_user(
     )
     
     if not token:
-        print("DEBUG: No token received in request") # Debug log
         raise credentials_exception
     
     # Decode token
-    print(f"DEBUG: Received token: {token[:10]}...") # Debug log
     payload = decode_access_token(token)
     if payload is None:
-        print("DEBUG: Token decode failed") # Debug log
         raise credentials_exception
     
     # Get user ID from token
     user_id: int = payload.get("user_id")
     if user_id is None:
-        print("DEBUG: No user_id in token payload") # Debug log
         raise credentials_exception
     
     # Get user from database
     user = get_user_by_id(db, user_id)
     if user is None:
-        print(f"DEBUG: User {user_id} not found in DB") # Debug log
         raise credentials_exception
     
     if not user.is_active:
-        print(f"DEBUG: User {user_id} is inactive") # Debug log
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Tài khoản đã bị vô hiệu hóa"
         )
     
-    print(f"DEBUG: User {user.email} authenticated successfully") # Debug log
     return user
 
 

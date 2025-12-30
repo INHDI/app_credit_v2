@@ -5,12 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/Modal";
 import { formatCurrency } from "@/utils/formatters";
-import { 
-  User, 
-  CreditCard, 
-  Calendar, 
-  DollarSign, 
-  FileText, 
+import {
+  User,
+  CreditCard,
+  Calendar,
+  DollarSign,
+  FileText,
   Hash,
   Receipt,
   CalendarDays,
@@ -33,18 +33,25 @@ interface GenericContractDetailModalProps {
   config: ContractDetailConfig;
   onLoadPaymentHistory?: (maHopDong: string) => Promise<PaymentHistoryItem[]>;
   onProcessPayment?: (maHD: string, amount: number) => Promise<void>;
+  initialTab?: string;
 }
 
-export default function GenericContractDetailModal({ 
-  isOpen, 
-  onClose, 
+export default function GenericContractDetailModal({
+  isOpen,
+  onClose,
   contract,
   onRefresh,
   config,
   onLoadPaymentHistory,
-  onProcessPayment
+  onProcessPayment,
+  initialTab = "overview"
 }: GenericContractDetailModalProps) {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab, isOpen]);
+
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   // const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -66,7 +73,7 @@ export default function GenericContractDetailModal({
     }).format(new Date());
     // Lấy ra mảng các ngày lớn hơn ngày hôm nay
     let hasPaymentToday
-    if (Number(contract?.ky_dong) > 1 ) {
+    if (Number(contract?.ky_dong) > 1) {
       hasPaymentToday = paymentHistory
         .filter((item: any) => {
           const paymentDate = item.ngay_tra_lai || item.Ngay;
@@ -77,14 +84,14 @@ export default function GenericContractDetailModal({
           const dateB = new Date(b.ngay_tra_lai || b.Ngay).getTime();
           return dateA - dateB; // Sắp xếp từ nhỏ đến lớn
         })[0];
-        if (!hasPaymentToday) return false;
+      if (!hasPaymentToday) return false;
       return hasPaymentToday.SuaLichSu === true;
     }
     const paymentToday = paymentHistory.find((item: any) => {
       const paymentDate = item.ngay_tra_lai || item.Ngay;
       return paymentDate === today && item.ThanhToan === true;
     });
-    
+
     return !!paymentToday;
   };
 
@@ -159,7 +166,7 @@ export default function GenericContractDetailModal({
           setLoading(false);
         }
       };
-      
+
       loadPaymentHistory();
     }
   }, [isOpen, contract?.ma_hop_dong, onLoadPaymentHistory]);
@@ -184,7 +191,7 @@ export default function GenericContractDetailModal({
         setLoading(false);
       }
     }
-    
+
     // Gọi callback refresh nếu có
     if (onRefresh) {
       onRefresh();
@@ -199,8 +206,8 @@ export default function GenericContractDetailModal({
   const computedThanhToanMotPhan = contract?.ma_hop_dong?.includes('TC')
     ? Number(contract.daily_interest || 0)
     : contract?.so_ky_tra
-    ? Math.round((Number(totalAmount) + Number(contract.lai_suat)) / Number(contract.so_ky_tra) / 1000) * 1000
-    : Number(contract?.lai_suat || 0);
+      ? Math.round((Number(totalAmount) + Number(contract.lai_suat)) / Number(contract.so_ky_tra) / 1000) * 1000
+      : Number(contract?.lai_suat || 0);
 
   // Render tab content based on active tab
   const renderTabContent = () => {
@@ -318,7 +325,7 @@ export default function GenericContractDetailModal({
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-xl p-3 sm:p-4 sm:col-span-2 lg:col-span-1">
                 <div className="flex items-center justify-between mb-2">
                   <Receipt className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 bg-purple-100 rounded-lg p-1 sm:p-1.5 flex-shrink-0" />
@@ -389,18 +396,17 @@ export default function GenericContractDetailModal({
     >
       {/* Tab Navigation - Responsive */}
       <div className="px-3 sm:px-6 pt-4 border-b border-slate-200">
-        <div className="flex overflow-x-auto scrollbar-hide" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+        <div className="flex overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {config.tabs.map((tab) => {
             const IconComponent = tab.icon;
             return (
               <button
                 key={`${config.contractType}-tab-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap min-w-0 flex-shrink-0 ${
-                  activeTab === tab.id
+                className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap min-w-0 flex-shrink-0 ${activeTab === tab.id
                     ? "border-blue-500 text-blue-600 bg-blue-50"
                     : "border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-50"
-                }`}
+                  }`}
               >
                 <IconComponent className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span className="truncate">{tab.label}</span>
@@ -426,14 +432,14 @@ export default function GenericContractDetailModal({
         </Button>
         {!contract.status.includes("Đã tất toán") && (
           <>
-            {config.contractType === 'tin_chap' && paymentHistory.length !=0 && 
-            <Button
-              onClick={() => setPrincipalModalOpen(true)}
-              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg px-4 sm:px-8 text-sm flex-1 sm:flex-none"
-            >
-              Thanh toán gốc
-            </Button>}
-            
+            {config.contractType === 'tin_chap' && paymentHistory.length != 0 &&
+              <Button
+                onClick={() => setPrincipalModalOpen(true)}
+                className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg px-4 sm:px-8 text-sm flex-1 sm:flex-none"
+              >
+                Thanh toán gốc
+              </Button>}
+
             {/* Hiển thị nút thanh toán lãi chỉ khi chưa thanh toán hôm nay */}
             {!checkActionThanhToanLai() && (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">

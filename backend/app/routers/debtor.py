@@ -38,34 +38,66 @@ async def get_debtor_contracts(
     # Get TraGop contracts
     tra_gop_contracts = db.query(TraGop).filter(TraGop.user_id == user_id).all()
     
+    tin_chap_list = []
+    for tc in tin_chap_contracts:
+        # Calculate details
+        lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == tc.MaHD).all()
+        lai_da_tra = sum(ls.TienDaTra for ls in lich_sus)
+        goc_con_lai = 0
+        if tc:
+            goc_con_lai = tc.SoTienVay - (tc.SoTienTraGoc or 0)
+        
+        # Calculate remaining interest logic (simplified from crud)
+        total_interest_due = sum(ls.SoTien for ls in lich_sus)
+        # Check if paid up to today
+        # today = date.today()
+        # lich_sus_to_day = [ls for ls in lich_sus if ls.Ngay >= today and ls.TrangThaiThanhToan == "Đóng đủ"]
+        # Simplified:
+        lai_con_lai = max(0, total_interest_due - lai_da_tra)
+
+        tin_chap_list.append({
+            "MaHD": tc.MaHD,
+            "HoTen": tc.HoTen,
+            "NgayVay": str(tc.NgayVay),
+            "SoTienVay": tc.SoTienVay,
+            "KyDong": tc.KyDong,
+            "LaiSuat": tc.LaiSuat,
+            "TrangThai": tc.TrangThai,
+            "LoaiHopDong": "Tín chấp",
+            "LaiDaTra": lai_da_tra,
+            "GocConLai": goc_con_lai,
+            "LaiConLai": lai_con_lai
+        })
+
+    tra_gop_list = []
+    for tg in tra_gop_contracts:
+        # Calculate details
+        histories = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == tg.MaHD).all()
+        da_thanh_toan = sum(h.TienDaTra for h in histories)
+        tong_phai_tra = sum(h.SoTien for h in histories)
+        con_lai = max(0, tong_phai_tra - da_thanh_toan)
+
+        tra_gop_list.append({
+            "MaHD": tg.MaHD,
+            "HoTen": tg.HoTen,
+            "NgayVay": str(tg.NgayVay),
+            "SoTienVay": tg.SoTienVay,
+            "KyDong": tg.KyDong,
+            "SoLanTra": tg.SoLanTra,
+            "LaiSuat": tg.LaiSuat,
+            "TrangThai": tg.TrangThai,
+            "LoaiHopDong": "Trả góp",
+            "DaThanhToan": da_thanh_toan, # General paid
+            "ConLai": con_lai, # General remaining
+            # Map to common fields for frontend table convenience if needed
+            "LaiDaTra": da_thanh_toan, 
+            "GocConLai": con_lai, # Using GocConLai as "Total Remaining" for TraGop to fit table structure
+            "LaiConLai": 0 # Not applicable separate interest for TraGop in this table view usually
+        })
+
     result = {
-        "tin_chap": [
-            {
-                "MaHD": tc.MaHD,
-                "HoTen": tc.HoTen,
-                "NgayVay": str(tc.NgayVay),
-                "SoTienVay": tc.SoTienVay,
-                "KyDong": tc.KyDong,
-                "LaiSuat": tc.LaiSuat,
-                "TrangThai": tc.TrangThai,
-                "LoaiHopDong": "Tín chấp"
-            }
-            for tc in tin_chap_contracts
-        ],
-        "tra_gop": [
-            {
-                "MaHD": tg.MaHD,
-                "HoTen": tg.HoTen,
-                "NgayVay": str(tg.NgayVay),
-                "SoTienVay": tg.SoTienVay,
-                "KyDong": tg.KyDong,
-                "SoLanTra": tg.SoLanTra,
-                "LaiSuat": tg.LaiSuat,
-                "TrangThai": tg.TrangThai,
-                "LoaiHopDong": "Trả góp"
-            }
-            for tg in tra_gop_contracts
-        ],
+        "tin_chap": tin_chap_list,
+        "tra_gop": tra_gop_list,
         "total_contracts": len(tin_chap_contracts) + len(tra_gop_contracts)
     }
     
@@ -147,25 +179,24 @@ async def get_debtor_summary(
     
     # Calculate totals
     total_borrowed = sum(tc.SoTienVay for tc in tin_chap_contracts) + sum(tg.SoTienVay for tg in tra_gop_contracts)
+    # Note: LaiSuat might be rate or amount. Summing it might not represent Total Interest Amount directly if it's a rate. 
+    # But sticking to existing logic for now unless 'LaiSuat' field is confirmed to be amount.
     total_interest = sum(tc.LaiSuat for tc in tin_chap_contracts) + sum(tg.LaiSuat for tg in tra_gop_contracts)
     
-    # Get amount paid from payment history
-    total_paid = 0
+    # Get all payment history for these contracts
+    all_history = []
     if all_contract_ids:
-        paid_records = db.query(LichSuTraLai).filter(
-            LichSuTraLai.MaHD.in_(all_contract_ids),
-            LichSuTraLai.ThanhToan == True
+        all_history = db.query(LichSuTraLai).filter(
+            LichSuTraLai.MaHD.in_(all_contract_ids)
         ).all()
-        total_paid = sum(p.TienDaTra for p in paid_records)
+        
+    # Calculate Paid and Remaining based on history
+    # Paid = Sum of TienDaTra of all records
+    total_paid = sum(p.TienDaTra for p in all_history)
     
-    # Get amount remaining (unpaid payments)
-    total_remaining = 0
-    if all_contract_ids:
-        unpaid_records = db.query(LichSuTraLai).filter(
-            LichSuTraLai.MaHD.in_(all_contract_ids),
-            LichSuTraLai.ThanhToan == False
-        ).all()
-        total_remaining = sum(p.SoTien for p in unpaid_records)
+    # Remaining = Sum of (SoTien - TienDaTra) for all records where SoTien > TienDaTra
+    # This accounts for unpaid and partially paid installments
+    total_remaining = sum(max(0, p.SoTien - p.TienDaTra) for p in all_history)
     
     result = {
         "tong_vay": total_borrowed,
@@ -183,7 +214,70 @@ async def get_debtor_summary(
     )
 
 
-@router.get("/payment-history", response_model=ApiResponse[List[Dict[str, Any]]])
+@router.post("/generate-qr", response_model=ApiResponse[Dict[str, str]])
+async def generate_payment_qr(
+    data: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.DEBTOR]))
+):
+    """
+    Generate VietQR URL for payment using VietQR.io Quick Link API (Way 2 - Recommended)
+    
+    Standard: EMVCo / VietQR
+    Format: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png
+    """
+    import urllib.parse
+    
+    ma_hd = data.get("ma_hd")
+    amount = data.get("amount", 0)
+    
+    if not ma_hd:
+        raise HTTPException(status_code=400, detail="Missing MaHD")
+        
+    # Get System Settings
+    from app.models.settings import SystemSettings, Bank
+    settings = db.query(SystemSettings).first()
+    
+    # 1. Determine Bank Info (BIN & Account)
+    # Default fallback (MBBank)
+    bank_id = "970422" # MBBank BIN
+    account_no = "0000000000"
+    account_name = "CREDIT SYSTEM"
+    template = "compact" # 'compact', 'qr_only', 'print'
+    
+    if settings:
+        if settings.bank_account_no:
+            account_no = settings.bank_account_no
+        if settings.bank_account_name:
+            account_name = settings.bank_account_name
+            
+        if settings.bank_id:
+            bank = db.query(Bank).filter(Bank.id == settings.bank_id).first()
+            if bank:
+                # Prioritize BIN (Tag 00/01 mapping logic usually relies on BIN in standard EMVCo)
+                # But VietQR QuickLink accepts Bank Code (e.g. VCB, MB) too.
+                # We use BIN for best compatibility.
+                bank_id = bank.bin if bank.bin else bank.code
+
+    # 2. Construct Payment Content (Tag 62 -> 08)
+    # Syntax: THANH TOAN HD <MA_HD>
+    # Note: VietQR content should be unsigned (no accents) and safe characters specific for banking apps
+    content = f"THANH TOAN HD {ma_hd}"
+    
+    # 3. URL Encode parameters
+    encoded_content = urllib.parse.quote(content)
+    encoded_name = urllib.parse.quote(account_name)
+    
+    # 4. Generate Quick Link
+    qr_url = f"https://img.vietqr.io/image/{bank_id}-{account_no}-{template}.png?amount={int(amount)}&addInfo={encoded_content}&accountName={encoded_name}"
+    
+    return ApiResponse.success_response(
+        data={"qr_url": qr_url},
+        message="Tạo mã QR thành công"
+    )
+
+
+@router.get("/payment-history", response_model=ApiResponse[Dict[str, Any]])
 async def get_payment_history(
     page: int = 1,
     page_size: int = 20,
@@ -241,4 +335,52 @@ async def get_payment_history(
             "total_pages": (total_count + page_size - 1) // page_size
         },
         message="Lấy lịch sử thanh toán thành công"
+    )
+
+
+@router.get("/contract-history/{ma_hd}", response_model=ApiResponse[List[Dict[str, Any]]])
+async def get_debtor_contract_history(
+    ma_hd: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.DEBTOR]))
+):
+    """
+    Get payment history for a specific contract of the debtor
+    Verifies that the contract belongs to the debtor
+    """
+    user_id = current_user.id
+    
+    # Check if contract belongs to user (TinChap or TraGop)
+    # Check TinChap
+    tc = db.query(TinChap).filter(TinChap.MaHD == ma_hd, TinChap.user_id == user_id).first()
+    if not tc:
+        # Check TraGop
+        tg = db.query(TraGop).filter(TraGop.MaHD == ma_hd, TraGop.user_id == user_id).first()
+        if not tg:
+            raise HTTPException(status_code=403, detail="Không có quyền truy cập hợp đồng này")
+
+    # Get history
+    history = db.query(LichSuTraLai).filter(
+        LichSuTraLai.MaHD == ma_hd
+    ).order_by(LichSuTraLai.Ngay.asc()).all()
+
+    result = [
+        {
+            "Stt": p.Stt,
+            "MaHD": p.MaHD,
+            "Ngay": str(p.Ngay),
+            "SoTien": p.SoTien,
+            "TienDaTra": p.TienDaTra,
+            "ThanhToan": p.ThanhToan,
+            "TrangThaiThanhToan": p.TrangThaiThanhToan,
+            "TrangThaiNgayThanhToan": p.TrangThaiNgayThanhToan,
+            "NoiDung": p.NoiDung, 
+            "LoaiHopDong": "Tín chấp" if p.MaHD.startswith("TC") else "Trả góp"
+        }
+        for p in history
+    ]
+
+    return ApiResponse.success_response(
+        data=result,
+        message="Lấy lịch sử thanh toán hợp đồng thành công"
     )
