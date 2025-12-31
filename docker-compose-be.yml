@@ -18,7 +18,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - TZ=Asia/Ho_Chi_Minh
     ports:
-      - "8088:8000"
+      - "8000:8000"
     volumes:
       - ./backend/app:/app/app
       - ./backend/pyproject.toml:/app/pyproject.toml:ro

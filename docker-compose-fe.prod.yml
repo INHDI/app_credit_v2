@@ -11,8 +11,8 @@ services:
       - NODE_ENV=production
       - TZ=Asia/Ho_Chi_Minh
       # Expose your API base URLs to the app if needed
-      # - NEXT_PUBLIC_API_BASE_URL=http://10.15.7.22:8088
-      # - NEXT_PUBLIC_WS_URL=ws://10.15.7.22:8088
+      # - NEXT_PUBLIC_API_BASE_URL=http://10.15.7.26:8000
+      # - NEXT_PUBLIC_WS_URL=ws://10.15.7.26:8000
     ports:
       - "3000:3000"
     networks:
@@ -21,4 +21,3 @@ services:
 networks:
   app-network:
     driver: bridge
-

@@ -55,7 +55,23 @@ async def update_settings(
         db.add(settings)
     
     # Update fields
-    for field, value in settings_update.model_dump(exclude_unset=True).items():
+    # Special handling for Telegram Chat ID
+    update_data = settings_update.model_dump(exclude_unset=True)
+    
+    if "telegram_chat_id" in update_data and update_data["telegram_chat_id"]:
+        chat_id = update_data["telegram_chat_id"].strip()
+        # Auto format for Channel ID (usually starts with -100)
+        # If user enters -XZY, convert to -100XYZ
+        if chat_id.startswith("-") and not chat_id.startswith("-100"):
+            # Insert 100 after the minus sign
+            chat_id = "-100" + chat_id[1:]
+        elif not chat_id.startswith("-"):
+            # If no minus sign at all, assume it needs -100 prefix
+            chat_id = "-100" + chat_id
+            
+        update_data["telegram_chat_id"] = chat_id
+
+    for field, value in update_data.items():
         setattr(settings, field, value)
         
     db.commit()

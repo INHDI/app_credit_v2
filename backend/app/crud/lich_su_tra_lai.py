@@ -1211,6 +1211,7 @@ def pay_lich_su(db: Session, stt: int, so_tien: int) -> dict:
         "da_thanh_toan": tong_da_thanh_toan,
         "so_tien_con_du": so_tien - tong_da_thanh_toan,
         "trang_thai_hop_dong": contract.TrangThai if contract else None,
+        "ho_ten": contract.HoTen if contract else "Khách hàng"
     }
 
 def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
@@ -1470,6 +1471,7 @@ def pay_lich_su_by_contract(db: Session, ma_hd: str, so_tien: int) -> dict:
         "da_thanh_toan": tong_da_thanh_toan,
         "so_tien_con_du": so_tien - tong_da_thanh_toan,
         "trang_thai_hop_dong": contract.TrangThai if contract else None,
+        "ho_ten": contract.HoTen if contract else "Khách hàng"
     }
 
 

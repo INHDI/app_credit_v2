@@ -13,7 +13,7 @@ from app.crud.user import get_user_by_id
 from app.models.user import User
 
 # OAuth2 scheme for token authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/form", auto_error=False)
 
 
 async def get_current_user(

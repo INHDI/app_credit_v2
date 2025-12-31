@@ -96,7 +96,7 @@ export default function DebtorPortalPage() {
     const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
 
     // QR Modal
-    const [qrModal, setQrModal] = useState<{ isOpen: boolean; qrUrl: string | null; amount: number; maHD: string }>({
+    const [qrModal, setQrModal] = useState<{ isOpen: boolean; qrUrl: string | null; amount: number; maHD: string; note?: string }>({
         isOpen: false, qrUrl: null, amount: 0, maHD: ''
     });
 
@@ -201,11 +201,15 @@ export default function DebtorPortalPage() {
             const data = await res.json();
 
             if (data.success) {
+                const totalDue = paymentData?.totalAmountDue || 0;
+                const paymentNote = amount >= totalDue ? "Thanh toán toàn bộ" : "Thanh toán một phần";
+
                 setQrModal({
                     isOpen: true,
                     maHD: maHD.toString(),
                     amount: amount,
-                    qrUrl: data.data.qr_url
+                    qrUrl: data.data.qr_url,
+                    note: paymentNote
                 });
                 return Promise.resolve();
             } else {

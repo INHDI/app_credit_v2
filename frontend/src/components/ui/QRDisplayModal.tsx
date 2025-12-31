@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Check, Loader2 } from 'lucide-react';
+import { API_CONFIG, createApiUrl } from '@/config/config';
+import { getAuthHeaders } from '@/services/authApi';
 
 interface QRDisplayModalProps {
     isOpen: boolean;
@@ -7,11 +10,58 @@ interface QRDisplayModalProps {
         qrUrl: string | null;
         amount: number;
         maHD: string;
+        note?: string;
     };
+    onPaymentConfirmed?: () => void;
 }
 
-const QRDisplayModal: React.FC<QRDisplayModalProps> = ({ isOpen, onClose, data }) => {
+const QRDisplayModal: React.FC<QRDisplayModalProps> = ({ isOpen, onClose, data, onPaymentConfirmed }) => {
+    const [isConfirming, setIsConfirming] = useState(false);
+    const [confirmed, setConfirmed] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     if (!isOpen || !data) return null;
+
+    const handleConfirmPayment = async () => {
+        if (isConfirming || confirmed) return;
+
+        setIsConfirming(true);
+        setError(null);
+
+        try {
+            const paymentMethod = data.note || "Chuyển khoản";
+            const response = await fetch(
+                createApiUrl(`/lich-su-tra-lai/confirm-payment/${data.maHD}?so_tien=${data.amount}&hinh_thuc_thanh_toan=${encodeURIComponent(paymentMethod)}`),
+                {
+                    method: 'POST',
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            const result = await response.json();
+
+            if (result.success) {
+                setConfirmed(true);
+                if (onPaymentConfirmed) {
+                    onPaymentConfirmed();
+                }
+                // Auto close after 2 seconds
+                setTimeout(() => {
+                    onClose();
+                }, 2000);
+            } else {
+                setError(result.message || 'Có lỗi xảy ra khi xác nhận thanh toán');
+            }
+        } catch (err) {
+            console.error('Payment confirmation error:', err);
+            setError('Không thể kết nối tới server');
+        } finally {
+            setIsConfirming(false);
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -56,6 +106,45 @@ const QRDisplayModal: React.FC<QRDisplayModalProps> = ({ isOpen, onClose, data }
                                 </span>
                             </div>
                         </div>
+
+                        {/* Confirm Payment Button */}
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-xl text-sm text-center">
+                                {error}
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handleConfirmPayment}
+                            disabled={isConfirming || confirmed}
+                            className={`w-full py-4 rounded-2xl font-semibold text-white transition-all flex items-center justify-center gap-2 ${confirmed
+                                ? 'bg-emerald-500 cursor-default'
+                                : isConfirming
+                                    ? 'bg-slate-400 cursor-wait'
+                                    : 'bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 active:scale-[0.98] shadow-lg shadow-teal-500/30'
+                                }`}
+                        >
+                            {confirmed ? (
+                                <>
+                                    <Check className="w-5 h-5" />
+                                    Đã xác nhận thanh toán!
+                                </>
+                            ) : isConfirming ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    Đang xử lý...
+                                </>
+                            ) : (
+                                <>
+                                    <Check className="w-5 h-5" />
+                                    Tôi đã thanh toán
+                                </>
+                            )}
+                        </button>
+
+                        <p className="text-center text-xs text-slate-400">
+                            Nhấn xác nhận sau khi đã hoàn tất chuyển khoản qua ngân hàng
+                        </p>
                     </div>
                 </div>
             </div>

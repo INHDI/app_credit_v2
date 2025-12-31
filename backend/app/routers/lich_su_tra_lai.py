@@ -298,3 +298,49 @@ async def update_lich_su(
     )
     return ApiResponse.success_response(data=result, message="Cập nhật lịch sử trả lãi thành công")
 
+
+@router.post("/confirm-payment/{ma_hd}", response_model=ApiResponse[Any])
+async def confirm_manual_payment(
+    ma_hd: str,
+    so_tien: int,
+    hinh_thuc_thanh_toan: str = "Chuyển khoản",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Manually confirm a payment and send Telegram notification.
+    Used when user confirms they have completed the bank transfer.
+    """
+    from app.services.notification import send_telegram_notification, format_payment_notification
+    
+    # Process the payment
+    result = crud_lich_su.pay_lich_su_by_contract(db=db, ma_hd=ma_hd, so_tien=so_tien)
+    if not result:
+        raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi cho hợp đồng này")
+    
+    # Broadcast WebSocket event
+    await broadcast_lich_su_tra_lai_event(
+        manager=manager,
+        event_type=EventType.LICH_SU_TRA_LAI_UPDATED,
+        lich_su_data={"ma_hd": ma_hd, "so_tien": so_tien, "result": result, "source": "manual_confirm"},
+        message=f"Xác nhận thanh toán {so_tien:,} VNĐ cho hợp đồng {ma_hd}"
+    )
+    
+    await broadcast_dashboard_update(
+        manager=manager,
+        dashboard_data={"action": "payment_confirmed", "ma_hd": ma_hd, "amount": so_tien},
+        message="Dashboard cần cập nhật sau xác nhận thanh toán"
+    )
+    
+    # Send Telegram notification
+    payer_name = result.get("ho_ten", "Khách hàng") if isinstance(result, dict) else "Khách hàng"
+    message = format_payment_notification(ma_hd, so_tien, payer_name, hinh_thuc_thanh_toan)
+    telegram_result = await send_telegram_notification(db, message)
+    
+    return ApiResponse.success_response(
+        data={
+            "payment": result,
+            "telegram": telegram_result
+        },
+        message="Xác nhận thanh toán và gửi thông báo thành công"
+    )

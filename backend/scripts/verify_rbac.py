@@ -3,7 +3,7 @@ import requests
 import time
 from datetime import date
 
-BASE_URL = "http://localhost:8088"
+BASE_URL = "http://localhost:8000"
 
 def print_result(step, success, details=""):
     status = "✅ PASS" if success else "❌ FAIL"
