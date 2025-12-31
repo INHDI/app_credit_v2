@@ -25,9 +25,9 @@ router = APIRouter(
 async def create_tra_gop(
     tra_gop: TraGopCreate, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Create a new TraGop contract (Admin only)"""
+    """Create a new TraGop contract (Admin and Collector)"""
     ma_hd = generate_tra_gop_id(db)
     result = crud_tra_gop.create_tra_gop(db=db, tra_gop=tra_gop, ma_hd=ma_hd)
     # Convert SQLAlchemy model to Pydantic schema

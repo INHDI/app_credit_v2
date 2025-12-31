@@ -24,9 +24,9 @@ router = APIRouter(
 async def create_lich_su( 
     db: Session = Depends(get_db),
     ma_hd: str = "",
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Create payment history records for a contract (Admin only)"""
+    """Create payment history records for a contract (Admin and Collector)"""
     result = crud_lich_su.create_lich_su(db=db, ma_hd=ma_hd)
     
     # Broadcast WebSocket event
@@ -58,9 +58,9 @@ async def get_all_lich_su(
 async def delete_thanh_toan(
     ma_hd: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Delete payment history from date todate (Admin only)"""
+    """Delete payment history from date todate (Admin and Collector)"""
     result = crud_lich_su.delete_thanh_toan(db=db, ma_hd=ma_hd)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")
@@ -248,9 +248,9 @@ async def pay_full_lich_su(
     ma_hd: str,
     tien_lai: int = 0,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Pay full payment history records for a specific contract (Admin only).
+    """Pay full payment history records for a specific contract (Admin and Collector).
 
     Optional query param `tien_lai` allows specifying how much interest is being paid now.
     """
@@ -278,9 +278,9 @@ async def update_lich_su(
     ma_hd: str,
     tien_da_tra: int = 0,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Update a payment history record (Admin only)"""
+    """Update a payment history record (Admin and Collector)"""
     result = crud_lich_su.update_lich_su(db=db, ma_hd=ma_hd, tien_da_tra=tien_da_tra)
     if not result:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch sử trả lãi")

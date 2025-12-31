@@ -8,7 +8,7 @@ from app.schemas.response import ApiResponse
 from app.schemas.dashboard import DashboardResponse
 from app.core.database import get_db
 from app.core.enums import TimePeriod
-from app.core.deps import require_admin
+from app.core.deps import require_admin, require_admin_or_collector
 from app.models.user import User
 from app.crud import dashboard as crud_dashboard
 
@@ -24,9 +24,9 @@ async def get_dashboard(
         description="Mốc thời gian: all, this_month, this_quarter, this_year"
     ),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Get dashboard data with time period filter (Admin only)"""
+    """Get dashboard data with time period filter (Admin and Collector)"""
     # Validate time_period
     if time_period not in TimePeriod.list_values():
         time_period = TimePeriod.ALL.value

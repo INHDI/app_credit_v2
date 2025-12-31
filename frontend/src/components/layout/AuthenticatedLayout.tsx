@@ -10,10 +10,10 @@ const PUBLIC_ROUTES = ['/login', '/register'];
 
 // Role-based route access
 const ROUTE_PERMISSIONS: Record<string, string[]> = {
-    '/': ['admin'],
+    '/': ['admin', 'collector'],
     '/nophaithu': ['admin', 'collector'],
-    '/tinchap': ['admin'],
-    '/tragop': ['admin'],
+    '/tinchap': ['admin', 'collector'],
+    '/tragop': ['admin', 'collector'],
     '/lichsu': ['admin'],
     '/thongke': ['admin'],
     '/users': ['admin'],

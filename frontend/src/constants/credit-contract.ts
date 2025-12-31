@@ -43,7 +43,7 @@ export const NAVIGATION_SECTIONS: NavigationSection[] = [
         hoverColor: "hover:bg-blue-50 hover:text-blue-700",
         badge: undefined,
         onClick: undefined,
-        roles: ['admin'], // Dashboard is admin only
+        roles: ['admin', 'collector'], // Dashboard is admin and collector
       },
       {
         id: "debtor-home",
@@ -96,7 +96,7 @@ export const NAVIGATION_SECTIONS: NavigationSection[] = [
         hoverColor: "hover:bg-green-50 hover:text-green-700",
         badge: undefined,
         onClick: undefined,
-        roles: ['admin'], // Admin only
+        roles: ['admin', 'collector'], // Admin and Collector
       },
       {
         id: "installment",
@@ -107,7 +107,7 @@ export const NAVIGATION_SECTIONS: NavigationSection[] = [
         badge: undefined,
         href: "/tragop",
         onClick: undefined,
-        roles: ['admin'], // Admin only
+        roles: ['admin', 'collector'], // Admin and Collector
       },
     ],
   },

@@ -12,7 +12,7 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 import logging
 
 from app.core.database import get_db
-from app.core.deps import require_admin
+from app.core.deps import require_admin, require_admin_or_collector
 from app.models.user import User
 from app.models.tin_chap import TinChap
 from app.models.tra_gop import TraGop
@@ -83,7 +83,7 @@ async def export_tin_chap(
     ma_hd: Optional[str] = None,
     ho_ten_list: Optional[str] = None,  # Comma-separated list of HoTen
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
     """
     Export Tin Chap contracts to Excel
@@ -187,7 +187,7 @@ async def export_tra_gop(
     ma_hd: Optional[str] = None,
     ho_ten_list: Optional[str] = None,  # Comma-separated list of HoTen
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
     """
     Export Tra Gop contracts to Excel

@@ -10,6 +10,7 @@ import TraGopDetailModal from "./TraGopDetailModal";
 import SettleConfirmModal from "@/components/ui/SettleConfirmModal";
 import DeleteConfirmModal from "@/components/ui/DeleteConfirmModal";
 import EditHDModal from "@/components/ui/editHDModal";
+import { useAuth } from "@/providers/AuthContext";
 
 interface TraGopTableProps {
   contracts: CreditContract[];
@@ -23,7 +24,8 @@ interface TraGopTableProps {
 export default function TraGopTable({ contracts, startIndex, onViewDetails, onSettled, onDelete }: TraGopTableProps) {
   // Generate unique instance ID for this component instance
   const instanceId = useMemo(() => Math.random().toString(36).substr(2, 9), []);
-  
+  const { user } = useAuth();
+
   const [showPaymentSchedule, setShowPaymentSchedule] = useState(false);
   const [selectedContract, setSelectedContract] = useState<CreditContract | null>(null);
   const [showSettle, setShowSettle] = useState(false);
@@ -155,15 +157,14 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                     <div className="font-bold text-amber-600 text-sm">{contract.SoLanTra || '-'}</div>
                   </td>
                   <td className="p-4 text-center">
-                    <Badge className={`${
-                      (contract.TrangThai || '').includes('tất toán')
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : (contract.TrangThai || '').includes('một phần')
+                    <Badge className={`${(contract.TrangThai || '').includes('tất toán')
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : (contract.TrangThai || '').includes('một phần')
                         ? 'bg-blue-100 text-blue-700'
                         : (contract.TrangThai || '').includes('Đóng đủ')
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : 'bg-amber-100 text-amber-700'
-                    } border-0 font-medium px-3 py-1 rounded-full shadow-sm`}>
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : 'bg-amber-100 text-amber-700'
+                      } border-0 font-medium px-3 py-1 rounded-full shadow-sm`}>
                       {contract.TrangThai || contract.status}
                     </Badge>
                   </td>
@@ -203,27 +204,29 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                         </TooltipContent>
                       </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 p-0 hover:bg-amber-50 rounded-lg transition-all duration-200 hover:shadow-sm"
-                            aria-label="Chỉnh sửa"
-                            onClick={() => handleOpenEdit(contract)}
-                          >
-                            <Edit className="h-4 w-4 text-amber-600" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Chỉnh sửa hợp đồng</p>
-                          {(contract.DaThanhToan > 0 || parseFloat(contract.tien_da_tra || '0') > 0) && (
-                            <p className="text-xs text-amber-500 mt-1">⚠️ Đã có thanh toán - chỉ được sửa tên khách hàng</p>
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
+                      {user?.role === 'admin' && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-9 w-9 p-0 hover:bg-amber-50 rounded-lg transition-all duration-200 hover:shadow-sm"
+                              aria-label="Chỉnh sửa"
+                              onClick={() => handleOpenEdit(contract)}
+                            >
+                              <Edit className="h-4 w-4 text-amber-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Chỉnh sửa hợp đồng</p>
+                            {((contract.DaThanhToan || 0) > 0 || parseFloat(contract.tien_da_tra || '0') > 0) && (
+                              <p className="text-xs text-amber-500 mt-1">⚠️ Đã có thanh toán - chỉ được sửa tên khách hàng</p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
 
-                      { contract.TrangThai !== 'Đã tất toán' && (
+                      {contract.TrangThai !== 'Đã tất toán' && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -241,7 +244,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                           </TooltipContent>
                         </Tooltip>
                       )}
-                      {onDelete && (
+                      {onDelete && user?.role === 'admin' && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -270,22 +273,21 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
         <div className="space-y-3 md:hidden">
           {contracts.map((contract, index) => (
             <div key={`tragop-mobile-${instanceId}-${startIndex}-${index}-${contract.MaHD || contract.id}`} className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-xs text-slate-500">#{startIndex + index + 1} • {contract.MaHD || contract.ma_hop_dong}</div>
-                <div className="font-semibold text-slate-800">{contract.HoTen || contract.ten_khach_hang}</div>
-                <div className="text-xs text-slate-500 mt-1">Ngày vay: {contract.NgayVay}</div>
-                <div className="text-xs text-slate-500 mt-1">Ngày kết thúc: {lastDateLichSuTraLai(contract)}</div>
-              </div>
-                <Badge className={`${
-                  (contract.TrangThai || '').includes('tất toán')
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : (contract.TrangThai || '').includes('một phần')
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs text-slate-500">#{startIndex + index + 1} • {contract.MaHD || contract.ma_hop_dong}</div>
+                  <div className="font-semibold text-slate-800">{contract.HoTen || contract.ten_khach_hang}</div>
+                  <div className="text-xs text-slate-500 mt-1">Ngày vay: {contract.NgayVay}</div>
+                  <div className="text-xs text-slate-500 mt-1">Ngày kết thúc: {lastDateLichSuTraLai(contract)}</div>
+                </div>
+                <Badge className={`${(contract.TrangThai || '').includes('tất toán')
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : (contract.TrangThai || '').includes('một phần')
                     ? 'bg-blue-100 text-blue-700'
                     : (contract.TrangThai || '').includes('Đóng đủ')
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : 'bg-amber-100 text-amber-700'
-                } border-0 font-medium px-2 py-0.5 rounded-full`}>{contract.TrangThai || contract.status}</Badge>
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'bg-amber-100 text-amber-700'
+                  } border-0 font-medium px-2 py-0.5 rounded-full`}>{contract.TrangThai || contract.status}</Badge>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <div>
@@ -337,20 +339,22 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                   </Tooltip>
                 </div>
                 <div className="flex items-center justify-end gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" className="rounded-lg border-amber-200 text-amber-700 hover:bg-amber-50 flex-1" onClick={() => handleOpenEdit(contract)}>
-                        <Edit className="h-4 w-4 mr-1" /> Sửa
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Chỉnh sửa hợp đồng</p>
-                    {(contract.DaThanhToan > 0 || parseFloat(contract.tien_da_tra || '0') > 0) && (
-                      <p className="text-xs text-amber-500 mt-1">⚠️ Đã có thanh toán - chỉ được sửa tên khách hàng</p>
-                    )}
-                    </TooltipContent>
-                  </Tooltip>
-                  { contract.TrangThai !== 'Đã tất toán' && (
+                  {user?.role === 'admin' && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="sm" className="rounded-lg border-amber-200 text-amber-700 hover:bg-amber-50 flex-1" onClick={() => handleOpenEdit(contract)}>
+                          <Edit className="h-4 w-4 mr-1" /> Sửa
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Chỉnh sửa hợp đồng</p>
+                        {((contract.DaThanhToan || 0) > 0 || parseFloat(contract.tien_da_tra || '0') > 0) && (
+                          <p className="text-xs text-amber-500 mt-1">⚠️ Đã có thanh toán - chỉ được sửa tên khách hàng</p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  {contract.TrangThai !== 'Đã tất toán' && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="outline" size="sm" className="rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50 flex-1" onClick={() => handleOpenSettle(contract)}>
@@ -362,7 +366,7 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
                       </TooltipContent>
                     </Tooltip>
                   )}
-                  {onDelete && (
+                  {onDelete && user?.role === 'admin' && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="outline" size="sm" className="rounded-lg border-red-200 text-red-700 hover:bg-red-50 flex-1" onClick={() => { setSelectedForDelete(contract); setShowDelete(true); }}>
@@ -389,15 +393,15 @@ export default function TraGopTable({ contracts, startIndex, onViewDetails, onSe
       <SettleConfirmModal
         isOpen={showSettle}
         onClose={handleCloseSettle}
-        maHopDong={selectedForSettle?.MaHD || selectedForSettle?.ma_hop_dong}
-        tenKhachHang={selectedForSettle?.HoTen || selectedForSettle?.ten_khach_hang}
+        maHopDong={selectedForSettle?.MaHD || (selectedForSettle as any)?.ma_hop_dong}
+        tenKhachHang={selectedForSettle?.HoTen || (selectedForSettle as any)?.ten_khach_hang}
         onSettled={onSettled}
         paymentHistory={selectedForSettle?.LichSuTraLai}
         contractType="tra_gop"
         contract={{
-          SoTienVay: selectedForSettle?.SoTienVay || selectedForSettle?.tong_tien_vay,
-          LaiConLai: selectedForSettle?.LaiConLai || selectedForSettle?.lai_con_lai,
-          TongTienVayVaLai: selectedForSettle?.TongTienVayVaLai || selectedForSettle?.tong_tien_vay_va_lai
+          SoTienVay: selectedForSettle?.SoTienVay || (selectedForSettle as any)?.tong_tien_vay,
+          LaiConLai: (selectedForSettle as any)?.LaiConLai || (selectedForSettle as any)?.lai_con_lai,
+          TongTienVayVaLai: (selectedForSettle as any)?.TongTienVayVaLai || (selectedForSettle as any)?.tong_tien_vay_va_lai
         }}
       />
       {/* Detail Modal */}

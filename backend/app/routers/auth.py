@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from app.core.database import get_db
 from app.core.security import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from app.core.deps import get_current_user, require_admin
+from app.core.deps import get_current_user, require_admin, require_admin_or_collector
 from app.core.enums import UserRole
 from app.schemas.user import UserCreate, UserLogin, UserResponse, Token, UserWithToken, UserUpdate
 from app.schemas.response import ApiResponse
@@ -159,10 +159,10 @@ async def get_current_user_info(
 async def get_users(
     role: str = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
     """
-    Get list of users (Admin only)
+    Get list of users (Admin and Collector)
     
     - **role**: Optional filter by role
     """

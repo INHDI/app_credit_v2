@@ -285,96 +285,172 @@ export default function UsersPage() {
                         <p className="text-slate-500 mt-1">Thử thay đổi bộ lọc hoặc thêm người dùng mới</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-slate-50/80 border-b border-slate-200">
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Thành viên</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Liên hệ</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Vai trò</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Trạng thái</th>
-                                    {isAdmin && (
-                                        <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Thao tác</th>
-                                    )}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {filteredUsers.map((user) => (
-                                    <tr key={user.id} className="hover:bg-slate-50/80 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-md ${user.role === 'admin' ? 'bg-gradient-to-br from-purple-500 to-indigo-600' :
+                    <>
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-slate-50/80 border-b border-slate-200">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Thành viên</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Liên hệ</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Vai trò</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Trạng thái</th>
+                                        {isAdmin && (
+                                            <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Thao tác</th>
+                                        )}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {filteredUsers.map((user) => (
+                                        <tr key={user.id} className="hover:bg-slate-50/80 transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-md ${user.role === 'admin' ? 'bg-gradient-to-br from-purple-500 to-indigo-600' :
                                                         user.role === 'collector' ? 'bg-gradient-to-br from-blue-500 to-cyan-600' :
                                                             'bg-gradient-to-br from-amber-500 to-orange-600'
-                                                    }`}>
-                                                    {user.ho_ten.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-semibold text-slate-900">{user.ho_ten}</div>
-                                                    <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                                                        <Calendar className="w-3 h-3" />
-                                                        Joined {new Date(user.created_at || Date.now()).toLocaleDateString('vi-VN')}
+                                                        }`}>
+                                                        {user.ho_ten.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-semibold text-slate-900">{user.ho_ten}</div>
+                                                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                                            <Calendar className="w-3 h-3" />
+                                                            Joined {new Date(user.created_at || Date.now()).toLocaleDateString('vi-VN')}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2 text-sm text-slate-600">
-                                                    <Mail className="w-3.5 h-3.5 text-slate-400" />
-                                                    {user.email}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                                                        <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                                        {user.email}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                                                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                        {user.so_dien_thoai}
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 text-sm text-slate-600">
-                                                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                                                    {user.so_dien_thoai}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <Badge className={`px-2.5 py-0.5 rounded-lg border-0 ring-1 ring-inset font-medium shadow-none ${getRoleBadgeColor(user.role)}`}>
+                                                    {getRoleDisplayName(user.role)}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                {user.is_active ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                        Active
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-600/20">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                                        Inactive
+                                                    </span>
+                                                )}
+                                            </td>
+                                            {isAdmin && (
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => openEditModal(user)}
+                                                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => openDeleteModal(user)}
+                                                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-4 p-4">
+                            {filteredUsers.map((user) => (
+                                <div key={`mobile-${user.id}`} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold shadow-md ${user.role === 'admin' ? 'bg-gradient-to-br from-purple-500 to-indigo-600' :
+                                                user.role === 'collector' ? 'bg-gradient-to-br from-blue-500 to-cyan-600' :
+                                                    'bg-gradient-to-br from-amber-500 to-orange-600'
+                                                }`}>
+                                                {user.ho_ten.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-slate-900">{user.ho_ten}</div>
+                                                <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                                    <Calendar className="w-3 h-3" />
+                                                    Joined {new Date(user.created_at || Date.now()).toLocaleDateString('vi-VN')}
                                                 </div>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <Badge className={`px-2.5 py-0.5 rounded-lg border-0 ring-1 ring-inset font-medium shadow-none ${getRoleBadgeColor(user.role)}`}>
-                                                {getRoleDisplayName(user.role)}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        </div>
+                                        <Badge className={`px-2 py-0.5 rounded-lg border-0 ring-1 ring-inset font-medium shadow-none text-xs ${getRoleBadgeColor(user.role)}`}>
+                                            {getRoleDisplayName(user.role)}
+                                        </Badge>
+                                    </div>
+
+                                    <div className="space-y-2 mb-4">
+                                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                                            <Mail className="w-4 h-4 text-slate-400" />
+                                            <span className="truncate">{user.email}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                                            <Phone className="w-4 h-4 text-slate-400" />
+                                            {user.so_dien_thoai}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-slate-500">Trạng thái:</span>
                                             {user.is_active ? (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                                     Active
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-600/20">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-600/20">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                                                     Inactive
                                                 </span>
                                             )}
-                                        </td>
-                                        {isAdmin && (
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => openEditModal(user)}
-                                                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg"
-                                                    >
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => openDeleteModal(user)}
-                                                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                        </div>
+                                    </div>
+
+                                    {isAdmin && (
+                                        <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                                            <Button
+                                                variant="outline"
+                                                className="flex-1 h-9 bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+                                                onClick={() => openEditModal(user)}
+                                            >
+                                                <Pencil className="w-4 h-4 mr-2" />
+                                                Chỉnh sửa
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                className="flex-1 h-9 bg-white hover:bg-red-50 border-red-200 text-red-600 hover:text-red-700 hover:border-red-300"
+                                                onClick={() => openDeleteModal(user)}
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                Xóa
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </>
                 )}
             </div>
 

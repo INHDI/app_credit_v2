@@ -29,10 +29,15 @@ def _calculate_payment_info(db: Session, ma_hd: str) -> dict:
     """
     # Get all payment history for this contract
     lich_sus = db.query(LichSuTraLai).filter(LichSuTraLai.MaHD == ma_hd).all()
-    lich_sus_to_day = [ls for ls in lich_sus if ls.Ngay >= date.today() and ls.TrangThaiThanhToan == TrangThaiThanhToan.DONG_DU.value]
+    date_today = date.today()
+    is_today_paid_fully = False
+    for ls in lich_sus:
+        if ls.Ngay == date_today and ls.TrangThaiThanhToan == TrangThaiThanhToan.DONG_DU.value:
+            is_today_paid_fully = True
     
     # Calculate total interest paid
     lai_da_tra = sum(ls.TienDaTra for ls in lich_sus)
+    lai_da_tra_today = sum(ls.TienDaTra for ls in lich_sus if ls.Ngay == date_today)
     
     # For TinChap, the remaining principal is the original loan amount
     # since TinChap only pays interest, not principal
@@ -46,10 +51,10 @@ def _calculate_payment_info(db: Session, ma_hd: str) -> dict:
     # Total interest should be calculated based on the contract terms
     # For now, we'll use a simple calculation
     total_interest_due = sum(ls.SoTien for ls in lich_sus)
-    if len(lich_sus_to_day) >= 1:
+    if is_today_paid_fully:
         lai_con_lai = 0
     else:
-        lai_con_lai = max(0, total_interest_due - lai_da_tra)
+        lai_con_lai = max(0, total_interest_due - lai_da_tra_today)
     
     return {
         "lai_da_tra": lai_da_tra,

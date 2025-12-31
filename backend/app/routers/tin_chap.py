@@ -25,9 +25,9 @@ router = APIRouter(
 async def create_tin_chap(
     tin_chap: TinChapCreate, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_admin_or_collector)
 ):
-    """Create a new TinChap contract (Admin only)"""
+    """Create a new TinChap contract (Admin and Collector)"""
     ma_hd = generate_tin_chap_id(db)
     result = crud_tin_chap.create_tin_chap(db=db, tin_chap=tin_chap, ma_hd=ma_hd)
     # Convert SQLAlchemy model to Pydantic schema
