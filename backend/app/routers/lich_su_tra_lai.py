@@ -346,6 +346,7 @@ async def confirm_manual_payment(
     Used when user confirms they have completed the bank transfer.
     """
     from app.services.notification import send_telegram_notification, format_payment_notification
+    from app.core.enums import UserRole
     
     # Process the payment
     result = crud_lich_su.pay_lich_su_by_contract(db=db, ma_hd=ma_hd, so_tien=so_tien)
@@ -366,10 +367,12 @@ async def confirm_manual_payment(
         message="Dashboard cần cập nhật sau xác nhận thanh toán"
     )
     
-    # Send Telegram notification
-    payer_name = result.get("ho_ten", "Khách hàng") if isinstance(result, dict) else "Khách hàng"
-    message = format_payment_notification(ma_hd, so_tien, payer_name, hinh_thuc_thanh_toan)
-    telegram_result = await send_telegram_notification(db, message)
+    # Send Telegram notification only when debtor confirms payment
+    telegram_result = {"success": False, "message": "Chỉ gửi thông báo khi người nợ thanh toán"}
+    if current_user.role == UserRole.DEBTOR.value:
+        payer_name = result.get("ho_ten", "Khách hàng") if isinstance(result, dict) else "Khách hàng"
+        message = format_payment_notification(ma_hd, so_tien, payer_name, hinh_thuc_thanh_toan)
+        telegram_result = await send_telegram_notification(db, message)
     
     return ApiResponse.success_response(
         data={

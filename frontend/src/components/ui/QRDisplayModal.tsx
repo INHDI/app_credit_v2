@@ -13,9 +13,10 @@ interface QRDisplayModalProps {
         note?: string;
     };
     onPaymentConfirmed?: () => void;
+    onConfirmPayment?: (maHD: string, amount: number) => Promise<void>;
 }
 
-const QRDisplayModal: React.FC<QRDisplayModalProps> = ({ isOpen, onClose, data, onPaymentConfirmed }) => {
+const QRDisplayModal: React.FC<QRDisplayModalProps> = ({ isOpen, onClose, data, onPaymentConfirmed, onConfirmPayment }) => {
     const [isConfirming, setIsConfirming] = useState(false);
     const [confirmed, setConfirmed] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -29,31 +30,43 @@ const QRDisplayModal: React.FC<QRDisplayModalProps> = ({ isOpen, onClose, data, 
         setError(null);
 
         try {
-            const paymentMethod = data.note || "Chuyển khoản";
-            const response = await fetch(
-                createApiUrl(`/lich-su-tra-lai/confirm-payment/${data.maHD}?so_tien=${data.amount}&hinh_thuc_thanh_toan=${encodeURIComponent(paymentMethod)}`),
-                {
-                    method: 'POST',
-                    headers: {
-                        ...getAuthHeaders(),
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            const result = await response.json();
-
-            if (result.success) {
+            if (onConfirmPayment) {
+                // Use custom confirmation handler (e.g., for principal payment)
+                await onConfirmPayment(data.maHD, data.amount);
                 setConfirmed(true);
                 if (onPaymentConfirmed) {
                     onPaymentConfirmed();
                 }
-                // Auto close after 2 seconds
                 setTimeout(() => {
                     onClose();
                 }, 2000);
             } else {
-                setError(result.message || 'Có lỗi xảy ra khi xác nhận thanh toán');
+                // Default: call interest payment confirm API
+                const paymentMethod = data.note || "Chuyển khoản";
+                const response = await fetch(
+                    createApiUrl(`/lich-su-tra-lai/confirm-payment/${data.maHD}?so_tien=${data.amount}&hinh_thuc_thanh_toan=${encodeURIComponent(paymentMethod)}`),
+                    {
+                        method: 'POST',
+                        headers: {
+                            ...getAuthHeaders(),
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                const result = await response.json();
+
+                if (result.success) {
+                    setConfirmed(true);
+                    if (onPaymentConfirmed) {
+                        onPaymentConfirmed();
+                    }
+                    setTimeout(() => {
+                        onClose();
+                    }, 2000);
+                } else {
+                    setError(result.message || 'Có lỗi xảy ra khi xác nhận thanh toán');
+                }
             }
         } catch (err) {
             console.error('Payment confirmation error:', err);
@@ -101,8 +114,17 @@ const QRDisplayModal: React.FC<QRDisplayModalProps> = ({ isOpen, onClose, data, 
                             </div>
                             <div className="flex justify-between items-center text-sm">
                                 <span className="text-slate-500">Nội dung</span>
-                                <span className="font-mono font-medium text-slate-700 bg-white px-2 py-1 rounded border border-slate-200">
-                                    THANH TOAN HD {data.maHD}
+                                <span className="font-mono font-medium text-slate-700 bg-white px-2 py-1 rounded border border-slate-200 text-xs">
+                                    {data.note === "Thanh toán toàn bộ gốc"
+                                        ? `THANH TOAN TOAN BO GOC HD ${data.maHD}`
+                                        : data.note === "Thanh toán một phần gốc"
+                                            ? `THANH TOAN MOT PHAN GOC HD ${data.maHD}`
+                                            : data.note === "Tất toán toàn bộ"
+                                                ? `TAT TOAN TOAN BO HD ${data.maHD}`
+                                                : data.note === "Tất toán một phần"
+                                                    ? `TAT TOAN MOT PHAN HD ${data.maHD}`
+                                                    : `THANH TOAN HD ${data.maHD}`
+                                    }
                                 </span>
                             </div>
                         </div>

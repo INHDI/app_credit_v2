@@ -13,7 +13,7 @@ interface PrincipalPaymentModalProps {
   maHopDong: string;
   remainingPrincipal?: number; // Gốc còn lại (nếu có) để hiển thị tham khảo
   onPaymentSuccess: () => void;
-  onProcessPayment: (amount: number) => Promise<void>;
+  onProcessPayment: (amount: number, paymentType: 'full' | 'partial') => Promise<void>;
 }
 
 export default function PrincipalPaymentModal({
@@ -46,7 +46,7 @@ export default function PrincipalPaymentModal({
         }
         amountToPay = cappedPartial;
       }
-      await onProcessPayment(amountToPay);
+      await onProcessPayment(amountToPay, paymentType);
       onPaymentSuccess();
       handleClose();
     } catch (e) {
@@ -94,9 +94,8 @@ export default function PrincipalPaymentModal({
             type="button"
             role="radio"
             aria-checked={paymentType === 'full'}
-            className={`w-full text-left p-4 border-2 rounded-xl cursor-pointer transition-colors duration-150 focus:outline-none ${
-              paymentType === 'full' ? 'border-emerald-500 bg-emerald-50 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
-            }`}
+            className={`w-full text-left p-4 border-2 rounded-xl cursor-pointer transition-colors duration-150 focus:outline-none ${paymentType === 'full' ? 'border-emerald-500 bg-emerald-50 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
             onClick={() => setPaymentType('full')}
           >
             <div className="flex items-center gap-3">
@@ -116,9 +115,8 @@ export default function PrincipalPaymentModal({
             type="button"
             role="radio"
             aria-checked={paymentType === 'partial'}
-            className={`w-full text-left p-4 border-2 rounded-xl cursor-pointer transition-colors duration-150 focus:outline-none ${
-              paymentType === 'partial' ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
-            }`}
+            className={`w-full text-left p-4 border-2 rounded-xl cursor-pointer transition-colors duration-150 focus:outline-none ${paymentType === 'partial' ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
             onClick={() => setPaymentType('partial')}
           >
             <div className="flex items-center gap-3">
@@ -161,7 +159,7 @@ export default function PrincipalPaymentModal({
               </div>
               <div className="flex items-center justify-between bg-white rounded-md px-3 py-2 border border-slate-200">
                 <span className="text-slate-600">Còn lại</span>
-                <span className={`font-semibold ${ (cappedPartial || 0) >= (remainingPrincipal || 0) ? 'text-green-600' : 'text-slate-900' }`}>
+                <span className={`font-semibold ${(cappedPartial || 0) >= (remainingPrincipal || 0) ? 'text-green-600' : 'text-slate-900'}`}>
                   {formatCurrency(remainingAfterPartial)}
                 </span>
               </div>

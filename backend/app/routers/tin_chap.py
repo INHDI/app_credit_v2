@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List, Any, Dict
 
 from app.core.database import get_db
-from app.core.deps import require_admin, require_admin_or_collector
+from app.core.deps import require_admin, require_admin_or_collector, require_admin_collector_or_debtor
 from app.core.enums import UserRole
 from app.models.user import User
 from app.schemas.tin_chap import TinChapCreate, TinChapResponse, TinChapUpdate, TinChap
@@ -157,12 +157,26 @@ async def tra_goc_tin_chap(
     ma_hd: str, 
     so_tien_tra_goc: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_or_collector)
+    current_user: User = Depends(require_admin_collector_or_debtor)
 ):
-    """Trả gốc hợp đồng tín chấp (Admin only)"""
+    """Trả gốc hợp đồng tín chấp (Admin/Collector/Debtor)"""
+    from app.services.notification import send_telegram_notification, format_principal_payment_notification
+    from app.core.enums import UserRole
+    
+    # Get contract info before payment for remaining calculation
+    db_tin_chap = crud_tin_chap.get_tin_chap(db, ma_hd)
+    if not db_tin_chap:
+        raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng tín chấp")
+    
+    payer_name = db_tin_chap.HoTen
+    remaining_before = max(0, db_tin_chap.SoTienVay - (db_tin_chap.SoTienTraGoc or 0))
+    
     success = crud_tin_chap.tra_goc_tin_chap(db=db, ma_hd=ma_hd, so_tien_tra_goc=so_tien_tra_goc)
     if not success:
         raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng tín chấp")
+    
+    # Calculate remaining principal after payment
+    remaining_principal = max(0, remaining_before - so_tien_tra_goc)
     
     # Broadcast WebSocket event
     await broadcast_tin_chap_event(
@@ -172,4 +186,18 @@ async def tra_goc_tin_chap(
         message=f"Trả gốc hợp đồng tín chấp {ma_hd} thành công"
     )
     
-    return ApiResponse.success_response(data={"MaHD": ma_hd}, message="Trả gốc hợp đồng tín chấp thành công")
+    # Only send Telegram notification when debtor is paying
+    telegram_result = {"success": False, "message": "Chỉ gửi thông báo khi người nợ thanh toán"}
+    if current_user.role == UserRole.DEBTOR.value:
+        message = format_principal_payment_notification(ma_hd, so_tien_tra_goc, payer_name, remaining_principal)
+        telegram_result = await send_telegram_notification(db, message)
+    
+    return ApiResponse.success_response(
+        data={
+            "MaHD": ma_hd, 
+            "so_tien_tra_goc": so_tien_tra_goc,
+            "goc_con_lai": remaining_principal,
+            "telegram": telegram_result
+        }, 
+        message="Trả gốc hợp đồng tín chấp thành công"
+    )

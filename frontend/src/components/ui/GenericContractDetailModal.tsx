@@ -33,6 +33,7 @@ interface GenericContractDetailModalProps {
   config: ContractDetailConfig;
   onLoadPaymentHistory?: (maHopDong: string) => Promise<PaymentHistoryItem[]>;
   onProcessPayment?: (maHD: string, amount: number) => Promise<void>;
+  onProcessPrincipalPayment?: (maHD: string, amount: number, paymentType: 'full' | 'partial') => Promise<void>;
   initialTab?: string;
 }
 
@@ -44,6 +45,7 @@ export default function GenericContractDetailModal({
   config,
   onLoadPaymentHistory,
   onProcessPayment,
+  onProcessPrincipalPayment,
   initialTab = "overview"
 }: GenericContractDetailModalProps) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -404,8 +406,8 @@ export default function GenericContractDetailModal({
                 key={`${config.contractType}-tab-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap min-w-0 flex-shrink-0 ${activeTab === tab.id
-                    ? "border-blue-500 text-blue-600 bg-blue-50"
-                    : "border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-50"
+                  ? "border-blue-500 text-blue-600 bg-blue-50"
+                  : "border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-50"
                   }`}
               >
                 <IconComponent className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
@@ -475,9 +477,15 @@ export default function GenericContractDetailModal({
           maHopDong={(contract as any).MaHD || (contract as any).ma_hop_dong}
           remainingPrincipal={(contract as any).GocConLai || 0}
           onPaymentSuccess={() => { onRefresh && onRefresh(); }}
-          onProcessPayment={async (amount) => {
+          onProcessPayment={async (amount, paymentType) => {
             const maHD = (contract as any).MaHD || (contract as any).ma_hop_dong;
-            await payPrincipalTinChap(maHD, amount);
+            if (onProcessPrincipalPayment) {
+              // Use custom handler (e.g., QR display for debtor)
+              await onProcessPrincipalPayment(maHD, amount, paymentType);
+            } else {
+              // Default: call API directly
+              await payPrincipalTinChap(maHD, amount);
+            }
           }}
         />
       )}

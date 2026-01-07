@@ -225,11 +225,17 @@ async def generate_payment_qr(
     
     Standard: EMVCo / VietQR
     Format: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png
+    
+    Payment types:
+    - "interest": THANH TOAN HD {ma_hd} (default)
+    - "principal_full": THANH TOAN TOAN BO GOC HD {ma_hd}
+    - "principal_partial": THANH TOAN MOT PHAN GOC HD {ma_hd}
     """
     import urllib.parse
     
     ma_hd = data.get("ma_hd")
     amount = data.get("amount", 0)
+    payment_type = data.get("payment_type", "interest")  # "interest", "principal_full", "principal_partial"
     
     if not ma_hd:
         raise HTTPException(status_code=400, detail="Missing MaHD")
@@ -259,10 +265,19 @@ async def generate_payment_qr(
                 # We use BIN for best compatibility.
                 bank_id = bank.bin if bank.bin else bank.code
 
-    # 2. Construct Payment Content (Tag 62 -> 08)
-    # Syntax: THANH TOAN HD <MA_HD>
-    # Note: VietQR content should be unsigned (no accents) and safe characters specific for banking apps
-    content = f"THANH TOAN HD {ma_hd}"
+    # 2. Construct Payment Content based on payment_type
+    # Note: VietQR content should be unsigned (no accents) and safe characters for banking apps
+    if payment_type == "principal_full":
+        content = f"THANH TOAN TOAN BO GOC HD {ma_hd}"
+    elif payment_type == "principal_partial":
+        content = f"THANH TOAN MOT PHAN GOC HD {ma_hd}"
+    elif payment_type == "interest_full":
+        content = f"TAT TOAN TOAN BO HD {ma_hd}"
+    elif payment_type == "interest_partial":
+        content = f"TAT TOAN MOT PHAN HD {ma_hd}"
+    else:
+        # Default: general payment
+        content = f"THANH TOAN HD {ma_hd}"
     
     # 3. URL Encode parameters
     encoded_content = urllib.parse.quote(content)

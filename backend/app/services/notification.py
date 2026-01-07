@@ -133,3 +133,36 @@ def format_payment_notification(ma_hd: str, amount: int, payer_name: str = "Khá
 ⏰ Thời gian: <i>Vừa xong</i>
 """
     return message.strip()
+
+
+def format_principal_payment_notification(ma_hd: str, amount: int, payer_name: str = "Khách hàng", remaining_principal: int = 0) -> str:
+    """
+    Format principal payment notification message for Telegram
+    
+    Args:
+        ma_hd: Contract ID
+        amount: Payment amount
+        payer_name: Name of payer
+        remaining_principal: Remaining principal after payment
+    
+    Returns:
+        Formatted HTML message for Telegram
+    """
+    amount_formatted = f"{amount:,.0f}".replace(",", ".")
+    remaining_formatted = f"{remaining_principal:,.0f}".replace(",", ".")
+    
+    payment_type_text = "Thanh toán toàn bộ gốc" if remaining_principal <= 0 else "Thanh toán một phần gốc"
+    
+    message = f"""
+💰 <b>THÔNG BÁO THANH TOÁN GỐC</b>
+
+📋 <b>Hợp đồng:</b> {ma_hd}
+👤 <b>Khách hàng:</b> {payer_name}
+💵 <b>Số tiền trả gốc:</b> {amount_formatted} VNĐ
+📊 <b>Gốc còn lại:</b> {remaining_formatted} VNĐ
+💳 <b>Loại:</b> {payment_type_text}
+✅ <b>Trạng thái:</b> Đã xác nhận thanh toán
+
+⏰ Thời gian: <i>Vừa xong</i>
+"""
+    return message.strip()

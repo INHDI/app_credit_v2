@@ -99,6 +99,8 @@ export default function DebtorPortalPage() {
     const [qrModal, setQrModal] = useState<{ isOpen: boolean; qrUrl: string | null; amount: number; maHD: string; note?: string }>({
         isOpen: false, qrUrl: null, amount: 0, maHD: ''
     });
+    // Track if QR is for principal payment (to use different confirm API)
+    const [isPrincipalPayment, setIsPrincipalPayment] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -193,16 +195,23 @@ export default function DebtorPortalPage() {
     const handleProcessPayment = async (maHD: string | number, amount: number) => {
         try {
             const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' };
+            const totalDue = paymentData?.totalAmountDue || 0;
+            // Determine payment type for interest payments
+            const paymentType = amount >= totalDue ? 'interest_full' : 'interest_partial';
+
             const res = await fetch(createApiUrl('/debtor/generate-qr'), {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({ ma_hd: maHD, amount: amount })
+                body: JSON.stringify({
+                    ma_hd: maHD,
+                    amount: amount,
+                    payment_type: paymentType
+                })
             });
             const data = await res.json();
 
             if (data.success) {
-                const totalDue = paymentData?.totalAmountDue || 0;
-                const paymentNote = amount >= totalDue ? "Thanh toán toàn bộ" : "Thanh toán một phần";
+                const paymentNote = amount >= totalDue ? "Tất toán toàn bộ" : "Tất toán một phần";
 
                 setQrModal({
                     isOpen: true,
@@ -406,6 +415,41 @@ export default function DebtorPortalPage() {
                 contract={getMappedContractDetail(selectedContract) as any}
                 config={selectedContract?.contract_type === 'tin_chap' ? tinChapConfig : traGopConfig}
                 initialTab={detailInitialTab}
+                onRefresh={fetchData}
+                // Principal payment handler - show QR for debtor
+                onProcessPrincipalPayment={async (maHD, amount, paymentType) => {
+                    try {
+                        const headers = { ...getAuthHeaders(), 'Content-Type': 'application/json' };
+                        // Map 'full' | 'partial' to backend expected values
+                        const backendPaymentType = paymentType === 'full' ? 'principal_full' : 'principal_partial';
+                        const res = await fetch(createApiUrl('/debtor/generate-qr'), {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify({
+                                ma_hd: maHD,
+                                amount: amount,
+                                payment_type: backendPaymentType
+                            })
+                        });
+                        const data = await res.json();
+
+                        if (data.success) {
+                            setIsPrincipalPayment(true);
+                            setQrModal({
+                                isOpen: true,
+                                maHD: maHD,
+                                amount: amount,
+                                qrUrl: data.data.qr_url,
+                                note: paymentType === 'full' ? "Thanh toán toàn bộ gốc" : "Thanh toán một phần gốc"
+                            });
+                        } else {
+                            alert('Lỗi: ' + data.message);
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('Lỗi kết nối');
+                    }
+                }}
                 // Mapping payment history load - using a fetch compatible with GenericContractDetailModal expectations
                 // For now, since we lack the specific API for debtor to get SINGLE contract history, 
                 // We might just pass an empty function or simplistic one. 
@@ -466,9 +510,24 @@ export default function DebtorPortalPage() {
                 isOpen={qrModal.isOpen}
                 onClose={() => {
                     setQrModal(prev => ({ ...prev, isOpen: false }));
+                    setIsPrincipalPayment(false);
                     fetchData();
                 }}
                 data={qrModal}
+                onConfirmPayment={isPrincipalPayment ? async (maHD, amount) => {
+                    // Call principal payment API
+                    const res = await fetch(createApiUrl(`/tin-chap/tra-goc/${maHD}?so_tien_tra_goc=${amount}`), {
+                        method: 'PUT',
+                        headers: {
+                            ...getAuthHeaders(),
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const result = await res.json();
+                    if (!result.success) {
+                        throw new Error(result.message || 'Lỗi thanh toán gốc');
+                    }
+                } : undefined}
             />
         </div>
     );
