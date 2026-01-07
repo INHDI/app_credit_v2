@@ -60,6 +60,52 @@ async def send_telegram_notification(
         return {"success": False, "error": f"Failed to send message: {str(e)}"}
 
 
+def format_daily_payment_reminder(payments: list) -> str:
+    """
+    Format daily payment reminder message for Telegram
+    
+    Args:
+        payments: List of dicts with keys: ma_hd, ho_ten, ngay, so_tien
+    
+    Returns:
+        Formatted HTML message for Telegram
+    """
+    from datetime import date
+    
+    if not payments:
+        return ""
+    
+    today = date.today().strftime("%d/%m/%Y")
+    total_amount = sum(p.get("so_tien", 0) for p in payments)
+    total_formatted = f"{total_amount:,.0f}".replace(",", ".")
+    
+    message_lines = [
+        f"📅 <b>NHẮC NỢ NGÀY {today}</b>",
+        "",
+        f"📊 Tổng số khoản: <b>{len(payments)}</b>",
+        f"💰 Tổng số tiền: <b>{total_formatted} VNĐ</b>",
+        "",
+        "━━━━━━━━━━━━━━━━━━━━━━",
+    ]
+    
+    for idx, p in enumerate(payments, 1):
+        amount_formatted = f"{p.get('so_tien', 0):,.0f}".replace(",", ".")
+        message_lines.extend([
+            f"",
+            f"<b>{idx}. {p.get('ho_ten', 'N/A')}</b>",
+            f"   📋 HĐ: <code>{p.get('ma_hd', 'N/A')}</code>",
+            f"   💵 Số tiền: <b>{amount_formatted} VNĐ</b>",
+        ])
+    
+    message_lines.extend([
+        "",
+        "━━━━━━━━━━━━━━━━━━━━━━",
+        "⏰ <i>Tin nhắn tự động từ hệ thống</i>"
+    ])
+    
+    return "\n".join(message_lines)
+
+
 def format_payment_notification(ma_hd: str, amount: int, payer_name: str = "Khách hàng", payment_method: str = "Chuyển khoản") -> str:
     """
     Format payment notification message for Telegram

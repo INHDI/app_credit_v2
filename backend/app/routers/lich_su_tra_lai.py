@@ -10,9 +10,11 @@ from app.core.deps import get_current_user, require_admin, require_admin_or_coll
 from app.core.enums import UserRole
 from app.models.user import User
 from app.schemas.lich_su_tra_lai import LichSuTraLai
+from app.schemas.no_phai_thu import NoPhaiThuResponse
 from app.schemas.response import ApiResponse
-from app.crud import lich_su_tra_lai as crud_lich_su
+from app.crud import lich_su_tra_lai as crud_lich_su, no_phai_thu as crud_no_phai_thu
 from app.websocket import broadcast_tin_chap_event, broadcast_tra_gop_event, manager, EventType, broadcast_lich_su_tra_lai_event, broadcast_dashboard_update
+from datetime import date
 
 router = APIRouter(
     prefix="/lich-su-tra-lai",
@@ -239,8 +241,40 @@ async def pay_lich_su_by_contract(
 @router.post("/auto-create-lich-su", response_model=ApiResponse[Any])
 async def auto_create_lich_su(db: Session = Depends(get_db)):
     """Auto create payment history records for all contracts (No auth - for scheduler)"""
+    from app.services.notification import send_telegram_notification, format_daily_payment_reminder
+    
     result = crud_lich_su.auto_create_lich_su(db=db)
-    return ApiResponse.success_response(data=result, message="Tự động cập nhật lịch sử trả lãi thành công")
+    
+    # Get no phai thu today
+    time = "today"
+    no_phai_thu = crud_no_phai_thu.get_no_phai_thus(db=db, time=time)
+    
+    # Collect payment reminders for today
+    payments_today = []
+    for i in no_phai_thu:
+        for j in i.LichSuTraLai:
+            if j["Ngay"] == date.today():
+                payments_today.append({
+                    "ma_hd": i.MaHD,
+                    "ho_ten": i.HoTen,
+                    "ngay": j["Ngay"],
+                    "so_tien": j["SoTien"]
+                })
+    
+    # Send Telegram notification if there are payments today
+    telegram_result = {"success": False, "message": "Không có khoản nợ cần thu hôm nay"}
+    if payments_today:
+        message = format_daily_payment_reminder(payments_today)
+        telegram_result = await send_telegram_notification(db, message)
+    
+    return ApiResponse.success_response(
+        data={
+            "lich_su_result": result,
+            "payments_today": payments_today,
+            "telegram": telegram_result
+        }, 
+        message="Tự động cập nhật lịch sử trả lãi thành công"
+    )
 
 
 @router.post("/pay-full/{ma_hd}", response_model=ApiResponse[Any])
