@@ -267,13 +267,18 @@ async def auto_create_lich_su(db: Session = Depends(get_db)):
         message = format_daily_payment_reminder(payments_today)
         telegram_result = await send_telegram_notification(db, message)
     
+    # Send individual notifications to debtors
+    from app.services.notification import notify_all_debtors_due_today
+    individual_results = await notify_all_debtors_due_today(db)
+    
     return ApiResponse.success_response(
         data={
             "lich_su_result": result,
             "payments_today": payments_today,
-            "telegram": telegram_result
+            "telegram": telegram_result,
+            "individual_notifications": individual_results
         }, 
-        message="Tự động cập nhật lịch sử trả lãi thành công"
+        message="Tự động cập nhật lịch sử trả lãi và gửi thông báo thành công"
     )
 
 

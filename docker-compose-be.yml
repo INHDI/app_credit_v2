@@ -16,9 +16,10 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - OTP_ENABLED=true
       - TZ=Asia/Ho_Chi_Minh
     ports:
-      - "8000:8000"
+      - "8089:8000"
     volumes:
       - ./backend/app:/app/app
       - ./backend/pyproject.toml:/app/pyproject.toml:ro

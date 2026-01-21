@@ -8,7 +8,7 @@ Container `scheduler` chạy cron (múi giờ Asia/Ho_Chi_Minh) và gọi API m�
 
 ```env
 # Endpoint API để tạo lịch sử trả lãi tự động
-URL_API_BACKEND=http://10.15.242.51:8000/lich-su-tra-lai/auto-create-lich-su
+URL_API_BACKEND=http://10.15.242.51:8089/lich-su-tra-lai/auto-create-lich-su
 
 # "true" hoặc "false". Nếu true, container sẽ chạy job ngay khi khởi động
 RUN_ON_STARTUP=true

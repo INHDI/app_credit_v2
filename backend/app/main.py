@@ -38,7 +38,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
+# Include routers (no prefix - Frontend uses these paths directly)
 app.include_router(auth.router)
 app.include_router(debtor.router)
 app.include_router(tin_chap.router)
@@ -61,6 +61,9 @@ async def startup_event():
     
     # Ensure default admin user exists
     await ensure_admin_user_exists()
+    
+    # Ensure bot user exists
+    await ensure_bot_user_exists()
 
 
 async def ensure_admin_user_exists():
@@ -107,6 +110,52 @@ async def ensure_admin_user_exists():
         
     except Exception as e:
         logging.error(f"❌ Error ensuring admin user: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
+async def ensure_bot_user_exists():
+    """Ensure dedicated bot user exists for API interactions"""
+    import os
+    from app.core.database import SessionLocal
+    from app.models.user import User
+    from app.core.security import hash_password
+    
+    db = SessionLocal()
+    try:
+        bot_email = "bot@appcredit.com"
+        
+        # Check if bot user exists
+        bot_user = db.query(User).filter(User.email == bot_email).first()
+        
+        if bot_user:
+            logging.info(f"✅ Bot user exists: {bot_user.email}")
+            return
+        
+        # Create bot user
+        # We use a fixed password for internal service-to-service communication
+        # In production this should be rotated/managed separately
+        bot_password = os.getenv("BOT_USER_PASSWORD", "bot_secure_pass_2024")
+        hashed_password = hash_password(bot_password)
+        
+        new_bot_user = User(
+            ho_ten="Telegram Bot System",
+            so_dien_thoai="0999999999", # Dummy phone
+            email=bot_email,
+            password_hash=hashed_password,
+            role="admin", # Admin role needed for payment interactions
+            is_active=True,
+            must_change_password=False  # Bot không cần đổi MK
+        )
+        
+        db.add(new_bot_user)
+        db.commit()
+        
+        logging.info(f"✅ Created dedicated Bot user: {bot_email}")
+        
+    except Exception as e:
+        logging.error(f"❌ Error ensuring bot user: {e}")
         db.rollback()
     finally:
         db.close()

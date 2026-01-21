@@ -19,7 +19,10 @@ import {
     User as UserIcon,
     Pencil,
     Trash2,
-    Calendar
+    Calendar,
+    RotateCcw,
+    Key,
+    RefreshCw
 } from 'lucide-react';
 
 type UserRole = 'admin' | 'collector' | 'debtor';
@@ -38,6 +41,8 @@ export default function UsersPage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [resetType, setResetType] = useState<'otp' | 'password' | 'all'>('all');
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
     // Form states
@@ -52,6 +57,7 @@ export default function UsersPage() {
     const [formLoading, setFormLoading] = useState(false);
     const [formError, setFormError] = useState('');
     const [formSuccess, setFormSuccess] = useState('');
+    const [resetResult, setResetResult] = useState<{ message: string; new_password?: string } | null>(null);
 
     // Fetch users
     const fetchUsers = async () => {
@@ -170,6 +176,40 @@ export default function UsersPage() {
             setSelectedUser(null);
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Không thể xóa');
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
+    // Handle Reset
+    const openResetModal = (user: User, type: 'otp' | 'password' | 'all') => {
+        setSelectedUser(user);
+        setResetType(type);
+        setResetResult(null);
+        setShowResetModal(true);
+    };
+
+    const handleReset = async () => {
+        if (!selectedUser) return;
+        setFormLoading(true);
+        setResetResult(null);
+        try {
+            let result;
+            switch (resetType) {
+                case 'otp':
+                    result = await AuthApi.resetUserOTP(selectedUser.id);
+                    break;
+                case 'password':
+                    result = await AuthApi.resetUserPassword(selectedUser.id);
+                    break;
+                case 'all':
+                    result = await AuthApi.resetUserAll(selectedUser.id);
+                    break;
+            }
+            setResetResult(result);
+            fetchUsers();
+        } catch (err) {
+            setResetResult({ message: err instanceof Error ? err.message : 'Lỗi reset' });
         } finally {
             setFormLoading(false);
         }
@@ -357,17 +397,32 @@ export default function UsersPage() {
                                                             size="icon"
                                                             onClick={() => openEditModal(user)}
                                                             className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg"
+                                                            title="Chỉnh sửa"
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => openDeleteModal(user)}
-                                                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
+                                                        {user.id !== currentUser?.id && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => openResetModal(user, 'all')}
+                                                                className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg"
+                                                                title="Reset OTP & Mật khẩu"
+                                                            >
+                                                                <RotateCcw className="w-4 h-4" />
+                                                            </Button>
+                                                        )}
+                                                        {user.id !== currentUser?.id && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => openDeleteModal(user)}
+                                                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                                                                title="Xóa"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             )}
@@ -643,6 +698,113 @@ export default function UsersPage() {
                             >
                                 {formLoading ? 'Đang xóa...' : 'Xóa ngay'}
                             </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reset Modal */}
+            {showResetModal && selectedUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+                        onClick={() => {
+                            setShowResetModal(false);
+                            setResetResult(null);
+                        }}
+                    />
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden relative z-10 animate-in zoom-in-95 duration-200 p-8">
+                        <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <RotateCcw className="w-8 h-8 text-amber-500" />
+                        </div>
+                        <h2 className="text-xl font-bold text-slate-900 mb-2 text-center">Reset tài khoản</h2>
+                        <p className="text-slate-600 mb-4 text-center">
+                            Chọn loại reset cho <span className="font-bold text-slate-900">{selectedUser.ho_ten}</span>
+                        </p>
+
+                        {/* Reset Type Selection */}
+                        {!resetResult && (
+                            <div className="space-y-3 mb-6">
+                                <button
+                                    onClick={() => setResetType('otp')}
+                                    className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center gap-4 ${resetType === 'otp' ? 'border-amber-500 bg-amber-50' : 'border-slate-200 hover:border-slate-300'
+                                        }`}
+                                >
+                                    <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                        <Shield className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-semibold text-slate-900">Reset OTP</div>
+                                        <div className="text-sm text-slate-500">Người dùng phải quét QR code lại</div>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => setResetType('password')}
+                                    className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center gap-4 ${resetType === 'password' ? 'border-amber-500 bg-amber-50' : 'border-slate-200 hover:border-slate-300'
+                                        }`}
+                                >
+                                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                                        <Key className="w-5 h-5 text-purple-600" />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-semibold text-slate-900">Reset mật khẩu</div>
+                                        <div className="text-sm text-slate-500">Mật khẩu mới: 123456</div>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => setResetType('all')}
+                                    className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center gap-4 ${resetType === 'all' ? 'border-amber-500 bg-amber-50' : 'border-slate-200 hover:border-slate-300'
+                                        }`}
+                                >
+                                    <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                                        <RefreshCw className="w-5 h-5 text-amber-600" />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-semibold text-slate-900">Reset tất cả</div>
+                                        <div className="text-sm text-slate-500">Reset OTP + Mật khẩu về 123456</div>
+                                    </div>
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Reset Result */}
+                        {resetResult && (
+                            <div className="mb-6">
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+                                    <div className="flex items-center gap-2 text-emerald-700 mb-2">
+                                        <CheckCircle className="w-5 h-5" />
+                                        <span className="font-semibold">Thành công!</span>
+                                    </div>
+                                    <p className="text-sm text-emerald-600">{resetResult.message}</p>
+                                    {resetResult.new_password && (
+                                        <div className="mt-3 p-3 bg-white rounded-xl border border-emerald-200">
+                                            <span className="text-sm text-slate-500">Mật khẩu mới: </span>
+                                            <code className="font-mono font-bold text-slate-900">{resetResult.new_password}</code>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3">
+                            <Button
+                                onClick={() => {
+                                    setShowResetModal(false);
+                                    setResetResult(null);
+                                }}
+                                className="flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200 h-12 rounded-2xl border-0"
+                            >
+                                {resetResult ? 'Đóng' : 'Hủy bỏ'}
+                            </Button>
+                            {!resetResult && (
+                                <Button
+                                    onClick={handleReset}
+                                    disabled={formLoading}
+                                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-white h-12 rounded-2xl shadow-xl shadow-amber-500/20"
+                                >
+                                    {formLoading ? 'Đang xử lý...' : 'Xác nhận'}
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>

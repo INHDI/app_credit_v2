@@ -3,7 +3,7 @@ services:
     build:
       context: ./scheduler
       dockerfile: Dockerfile
-    container_name: app_credit_scheduler_v2
+    container_name: app_credit_scheduler_v3
     restart: unless-stopped
     environment:
       - TZ=Asia/Ho_Chi_Minh

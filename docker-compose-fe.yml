@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: conan-frontend-dev
     ports:
-      - "3003:3000"
+      - "3004:3000"
     volumes:
       # Mount source code for hot reload
       - ./frontend:/app

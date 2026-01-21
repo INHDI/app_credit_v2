@@ -1,0 +1,24 @@
+services:
+  telegram_bot:
+    build:
+      context: ./telegram_bot
+      dockerfile: Dockerfile
+    container_name: app_credit_telegram_bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-} # Optional if in DB
+      - POSTGRES_SERVER=${POSTGRES_SERVER:-10.15.242.51}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5436}
+      - POSTGRES_DB=${POSTGRES_DB:-app}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - LOG_LEVEL=INFO
+    networks:
+      - app_network
+    volumes:
+      - ./telegram_bot:/app
+
+networks:
+  app_network:
+    external: true
+    name: app_credit_v3_app-network

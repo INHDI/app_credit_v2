@@ -15,6 +15,9 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key-change-in-production
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 hours default
 
+# OTP Configuration
+OTP_ENABLED = os.getenv("OTP_ENABLED", "true").lower() in ("true", "1", "yes")
+
 
 def hash_password(password: str) -> str:
     """

@@ -10,6 +10,13 @@ export interface User {
     role: 'admin' | 'collector' | 'debtor';
     is_active: boolean;
     created_at: string;
+    // OTP fields
+    otp_enabled?: boolean;
+    otp_verified?: boolean;
+    must_change_password?: boolean;
+    // Telegram fields
+    telegram_chat_id?: string | null;
+    telegram_verified?: boolean;
 }
 
 export interface LoginRequest {
@@ -40,6 +47,33 @@ export interface ApiResponse<T = unknown> {
     data: T;
     message?: string | null;
     error?: string | null;
+}
+
+// OTP Login Flow Types
+export interface LoginStep1Response {
+    requires_otp: boolean;
+    requires_setup: boolean;
+    requires_password_change: boolean;
+    temp_token: string;
+    user_email: string;
+    token?: TokenResponse;
+    user?: User;
+}
+
+export interface OTPSetupResponse {
+    qr_code_base64: string;
+    secret: string;
+    otpauth_url: string;
+}
+
+export interface OTPVerifyRequest {
+    temp_token: string;
+    code: string;
+}
+
+export interface PasswordChangeRequest {
+    current_password: string;
+    new_password: string;
 }
 
 // Token storage keys
@@ -152,7 +186,84 @@ export class AuthApi {
         return response.json();
     }
 
-    // Login
+    // Login Step 1: Verify email + password, returns OTP requirements
+    static async loginStep1(credentials: LoginRequest): Promise<LoginStep1Response> {
+        const response = await this.request<ApiResponse<LoginStep1Response>>(
+            API_CONFIG.ENDPOINTS.AUTH_LOGIN,
+            {
+                method: 'POST',
+                body: JSON.stringify(credentials),
+            }
+        );
+
+        if (response.success && response.data) {
+            // If OTP is disabled, we get the token and user directly
+            if (response.data.token && response.data.user) {
+                setToken(response.data.token.access_token);
+                setStoredUser(response.data.user);
+            }
+            return response.data;
+        }
+
+        throw new Error(response.message || 'Login failed');
+    }
+
+    // Get OTP QR code for first-time setup
+    static async getOTPSetup(tempToken: string): Promise<OTPSetupResponse> {
+        const response = await this.request<ApiResponse<OTPSetupResponse>>(
+            `${API_CONFIG.ENDPOINTS.AUTH_LOGIN.replace('/login', '')}/otp/setup`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ temp_token: tempToken }),
+            }
+        );
+
+        if (response.success && response.data) {
+            return response.data;
+        }
+
+        throw new Error(response.message || 'Failed to get OTP setup');
+    }
+
+    // Verify OTP and complete login
+    static async verifyOTP(tempToken: string, code: string): Promise<UserWithToken> {
+        const response = await this.request<ApiResponse<UserWithToken>>(
+            `${API_CONFIG.ENDPOINTS.AUTH_LOGIN.replace('/login', '')}/otp/verify`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ temp_token: tempToken, code }),
+            }
+        );
+
+        if (response.success && response.data) {
+            const { user, token } = response.data;
+            setToken(token.access_token);
+            setStoredUser(user);
+            return response.data;
+        }
+
+        throw new Error(response.message || 'OTP verification failed');
+    }
+
+    // Change password (required on first login)
+    static async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+        const response = await this.request<ApiResponse<unknown>>(
+            `${API_CONFIG.ENDPOINTS.AUTH_LOGIN.replace('/login', '')}/password/change`,
+            {
+                method: 'POST',
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                }),
+            }
+        );
+
+        if (!response.success) {
+            throw new Error(response.message || 'Password change failed');
+        }
+    }
+
+    // Legacy login (for backward compatibility or testing)
     static async login(credentials: LoginRequest): Promise<UserWithToken> {
         const response = await this.request<ApiResponse<UserWithToken>>(
             API_CONFIG.ENDPOINTS.AUTH_LOGIN,
@@ -163,7 +274,6 @@ export class AuthApi {
         );
 
         if (response.success && response.data) {
-            // Backend returns {user, token: {access_token, token_type}}
             const { user, token } = response.data;
             setToken(token.access_token);
             setStoredUser(user);
@@ -276,6 +386,60 @@ export class AuthApi {
         );
     }
 
+    // Reset user OTP (Admin only)
+    static async resetUserOTP(userId: number): Promise<{ message: string }> {
+        const response = await this.request<ApiResponse<{ user_id: number }>>(
+            `${API_CONFIG.ENDPOINTS.AUTH_LOGIN.replace('/login', '')}/otp/reset/${userId}`,
+            {
+                method: 'POST',
+            }
+        );
+
+        if (response.success) {
+            return { message: response.message || 'Reset OTP thành công' };
+        }
+
+        throw new Error(response.message || 'Failed to reset OTP');
+    }
+
+    // Reset user password (Admin only)
+    static async resetUserPassword(userId: number): Promise<{ message: string; new_password: string }> {
+        const response = await this.request<ApiResponse<{ user_id: number; new_password: string }>>(
+            `${API_CONFIG.ENDPOINTS.AUTH_LOGIN.replace('/login', '')}/password/reset/${userId}`,
+            {
+                method: 'POST',
+            }
+        );
+
+        if (response.success && response.data) {
+            return {
+                message: response.message || 'Reset mật khẩu thành công',
+                new_password: response.data.new_password
+            };
+        }
+
+        throw new Error(response.message || 'Failed to reset password');
+    }
+
+    // Reset both OTP and password (Admin only)
+    static async resetUserAll(userId: number): Promise<{ message: string; new_password: string }> {
+        const response = await this.request<ApiResponse<{ user_id: number; new_password: string }>>(
+            `${API_CONFIG.ENDPOINTS.AUTH_LOGIN.replace('/login', '')}/reset-all/${userId}`,
+            {
+                method: 'POST',
+            }
+        );
+
+        if (response.success && response.data) {
+            return {
+                message: response.message || 'Reset thành công',
+                new_password: response.data.new_password
+            };
+        }
+
+        throw new Error(response.message || 'Failed to reset user');
+    }
+
     // Check if user is authenticated
     static isAuthenticated(): boolean {
         return !!getToken();
@@ -283,3 +447,4 @@ export class AuthApi {
 }
 
 export default AuthApi;
+

@@ -1,7 +1,7 @@
 """
 User schemas for API request/response validation
 """
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -39,8 +39,22 @@ class UserResponse(BaseModel):
     role: str = Field(..., description="Vai trò")
     is_active: bool = Field(..., description="Trạng thái hoạt động")
     created_at: datetime = Field(..., description="Ngày tạo")
+    
+    # OTP fields
+    otp_enabled: bool = Field(default=False, description="2FA đã được bật")
+    otp_verified: bool = Field(default=False, description="Đã xác thực OTP lần đầu")
+    must_change_password: bool = Field(default=True, description="Cần đổi mật khẩu")
+    
+    # Telegram fields
+    telegram_chat_id: Optional[str] = Field(None, description="Telegram Chat ID")
+    telegram_verified: bool = Field(default=False, description="Đã xác thực Telegram")
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('must_change_password', 'telegram_verified', 'otp_enabled', 'otp_verified', mode='before')
+    @classmethod
+    def handle_none_bool(cls, v: Optional[bool]) -> bool:
+        return bool(v)
 
 
 class Token(BaseModel):

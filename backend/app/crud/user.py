@@ -20,8 +20,13 @@ def create_user(db: Session, user_create: UserCreate) -> User:
     Returns:
         Created User object
     """
+    from app.services import otp_service
+    
     # Hash the password
     hashed_password = hash_password(user_create.password)
+    
+    # Generate OTP secret for 2FA (ready for first login)
+    otp_secret = otp_service.generate_otp_secret()
     
     # Create user object
     db_user = User(
@@ -29,7 +34,11 @@ def create_user(db: Session, user_create: UserCreate) -> User:
         so_dien_thoai=user_create.so_dien_thoai,
         email=user_create.email,
         password_hash=hashed_password,
-        role=user_create.role or "debtor"
+        role=user_create.role or "debtor",
+        otp_secret=otp_secret,  # Pre-generate OTP secret
+        otp_enabled=False,       # Will be enabled after first OTP verify
+        otp_verified=False,
+        must_change_password=True  # Require password change on first login
     )
     
     db.add(db_user)

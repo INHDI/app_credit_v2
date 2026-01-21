@@ -1,7 +1,7 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: 'http://10.15.242.51:8000',
-  WS_URL: 'ws://10.15.242.51:8000',
+  BASE_URL: 'http://10.15.242.51:8089',
+  WS_URL: 'ws://10.15.242.51:8089',
   ENDPOINTS: {
     // Auth
     AUTH: '/auth',
@@ -58,12 +58,12 @@ export const WS_CONFIG = {
 export const createApiUrl = (endpoint: string, params?: Record<string, string>): string => {
   const baseUrl = ENV_CONFIG.API_BASE_URL;
   const url = new URL(endpoint, baseUrl);
-  
+
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.append(key, value);
     });
   }
-  
+
   return url.toString();
 };
